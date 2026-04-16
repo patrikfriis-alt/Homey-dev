@@ -1,0 +1,7 @@
+{
+  "name": "homey",
+  "version": "1.0.0",
+  "devDependencies": {
+    "@playwright/test": "^1.42.0"
+  }
+}
