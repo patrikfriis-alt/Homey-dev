@@ -1853,7 +1853,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v6.8</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v6.9</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1994,7 +1994,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v6.8</footer>
+  <footer>Homey v6.9</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2081,7 +2081,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v6.8</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v6.9</footer>
 </div>
 
 <script>
@@ -4082,7 +4082,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v6.8</footer>
+    <footer>Homey v6.9</footer>
   `;
 }
 
@@ -4092,40 +4092,13 @@ const tasksFilter = { status: 'all', childId: 'all' };
 function renderParentTasks() {
   const panel = document.getElementById('parent-panel-tasks');
 
-  // ---- OSIO 1: Avoimet tehtävät ----
-  const openTaskItems = state.tasks.map(task => {
-    const assignedChild = task.assigned_to ? state.children.find(c => c.id === task.assigned_to) : null;
-    const reservedChild = task.reserved_by ? state.children.find(c => c.id === task.reserved_by) : null;
-    const typeBadge = task.type === 'free'
-      ? `<span class="badge badge-unpaid" style="font-size:0.7rem;">${t('free')}</span>`
-      : `<span class="badge badge-pending" style="font-size:0.7rem;">${t('child')}</span>`;
-
-    let infoHtml = '';
-    if (task.type === 'assigned' && assignedChild) {
-      infoHtml = `<div style="display:flex;align-items:center;gap:6px;margin-top:4px;">${renderAvatar(assignedChild, 22)}<span style="font-size:0.8rem;color:var(--text-muted)">${esc(assignedChild.name)}</span></div>`;
-    } else if (task.type === 'free' && reservedChild) {
-      infoHtml = `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">${t('reservedFor')}: ${esc(reservedChild.name)}</div>`;
-    } else if (task.type === 'free') {
-      infoHtml = `<div style="font-size:0.8rem;color:var(--success);margin-top:2px;">${t('openStatus')}</div>`;
-    }
-
-    const recBadgeP = task.recurrence ? `<span class="task-rec-badge">🔁 ${recurrenceLabel(task.recurrence)}</span>` : '';
-    return `
-      <div class="task-item" style="cursor:default;">
-        <div class="task-row1">
-          <span class="task-name">${esc(translateTaskTitle(task.title))}</span>
-          ${recBadgeP}
-        </div>
-        <div class="task-row2">
-          <div class="task-row2-left">
-            <span class="task-price">${fmt(task.amount)}</span>
-            ${typeBadge}
-          </div>
-          <div class="task-row2-right" style="font-size:0.8rem;color:var(--text-muted);">${infoHtml}</div>
-        </div>
-      </div>
-    `;
-  }).join('') || `<div class="empty-state"><div class="empty-icon">📋</div><p>${t('noOpenTasks')}</p></div>`;
+  // ---- OSIO 1: Tehtävät yhteenveto ----
+  const _assigned = state.tasks.filter(tk => tk.type === 'assigned');
+  const _free = state.tasks.filter(tk => tk.type === 'free');
+  const _expired = state.tasks.filter(tk => tk.deadline && getDeadlineInfo(tk.deadline)?.isExpired);
+  const _assignedWithChild = _assigned.filter(tk => tk.assigned_to);
+  const _freeOpen = _free.filter(tk => !tk.reserved_by);
+  const _freeReserved = _free.filter(tk => tk.reserved_by);
 
   // ---- OSIO 2: Suoritukset filtterit ----
   const statusBtns = [
@@ -4238,8 +4211,13 @@ function renderParentTasks() {
 
   panel.innerHTML = `
     <div class="card">
-      <div class="card-title">${t('openTasks')} (${state.tasks.length})</div>
-      ${openTaskItems}
+      <div class="card-title">Tehtävät</div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:4px 0;font-size:0.9rem;">
+        <div>📌 <strong>Omat tehtävät:</strong> ${_assigned.length} kpl (${_assignedWithChild.length} varattuna)</div>
+        <div>🔓 <strong>Vapaat tehtävät:</strong> ${_free.length} kpl (${_freeOpen.length} auki, ${_freeReserved.length} varattuna)</div>
+        <div>⏰ <strong>Vanhentuneet:</strong> ${_expired.length} kpl</div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="switchParentTab('manage', null)">Hallinnoi tehtäviä</button>
     </div>
     ${claimSection}
     <div class="card" style="margin-bottom:10px;">
