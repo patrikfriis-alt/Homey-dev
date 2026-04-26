@@ -1853,7 +1853,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.2</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.3</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1994,7 +1994,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.2</footer>
+  <footer>Homey v7.0.3</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2081,7 +2081,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.2</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.3</footer>
 </div>
 
 <script>
@@ -3857,7 +3857,7 @@ async function markDone(taskId, btn, comment = '', chosen_reward_type = 'cash') 
 
     // Save comment if provided
     if (comment && inserted?.id) {
-      await sb.from('homey_comments').insert({ completion_id: inserted.id, child_comment: comment });
+      await sb.from('homey_comments').insert({ completion_id: inserted.id, child_comment: comment, family_id: currentFamilyId });
     }
 
     showToast(t('taskDone'), 'success');
@@ -4092,7 +4092,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.2</footer>
+    <footer>Homey v7.0.3</footer>
   `;
 }
 
@@ -6074,7 +6074,7 @@ async function syncOfflineQueue() {
         const { data: inserted, error } = await sb.from('homey_completions').insert(payload).select().single();
         if (!error) {
           if (_comment && inserted?.id) {
-            await sb.from('homey_comments').insert({ completion_id: inserted.id, child_comment: _comment });
+            await sb.from('homey_comments').insert({ completion_id: inserted.id, child_comment: _comment, family_id: currentFamilyId });
           }
           const tx2 = db.transaction('pending', 'readwrite');
           tx2.objectStore('pending').delete(localId);
