@@ -1676,6 +1676,15 @@
   </div>
 </div>
 
+<!-- ===== CHILD MESSAGES MODAL ===== -->
+<div id="modal-child-messages" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">📬 Uusia viestejä</div>
+    <div id="child-messages-list" style="display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow-y:auto;"></div>
+    <button class="btn btn-primary w-full" style="margin-top:16px;" onclick="closeModal('modal-child-messages')">OK</button>
+  </div>
+</div>
+
 <!-- ===== ADD CHALLENGE MODAL (Feature 3) ===== -->
 <div id="modal-add-challenge" class="modal-overlay hidden">
   <div class="modal">
@@ -1853,7 +1862,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.3</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.4</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1994,7 +2003,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.3</footer>
+  <footer>Homey v7.0.4</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2081,7 +2090,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.3</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.4</footer>
 </div>
 
 <script>
@@ -2713,6 +2722,7 @@ const state = {
   pendingClaims: [],     // homey_reward_claims pending for current child
   challengeBonusGiven: new Set(), // Feature 3: track given bonuses in session
   dismissedReminders: new Set(),  // Feature 7
+  seenMessages: new Set(),        // track shown child message notifications per session
   isOffline: !navigator.onLine,   // Feature 8
   selectedChildId: null, // login step
   pinInput: '',
@@ -3512,6 +3522,7 @@ function setupRealtime() {
           if (!comp) return;
           await loadAll();
           renderChildHistory();
+          checkChildMessages();
           showNotif('💬 Vanhempi vastasi kommenttiisi!', 'info');
         } catch (err) { console.error('Realtime callback error:', err); }
       })
@@ -3584,6 +3595,8 @@ function closePaymentPopup() {
 // ===== CHILD VIEW =====
 async function initChildView() {
   const child = state.currentUser;
+  const saved = sessionStorage.getItem('homey_seen');
+  state.seenMessages = new Set(saved ? JSON.parse(saved) : []);
   document.getElementById('child-header-name').textContent = child.name;
   document.getElementById('child-saldo-name').textContent = child.name + t('saldoSuffix');
   renderChildSaldo();
@@ -3597,6 +3610,56 @@ async function initChildView() {
   renderRanking();
   updateNotifButtons();
   updateOfflineBanner();
+  checkChildMessages();
+}
+
+function checkChildMessages() {
+  if (state.userRole !== 'child') return;
+  const childId = state.currentUser.id;
+  const messages = [];
+
+  state.completions
+    .filter(c => c.child_id === childId && c.status === 'rejected')
+    .forEach(c => {
+      const key = `rejected_${c.id}`;
+      if (state.seenMessages.has(key)) return;
+      const task = state.allTasks.find(t => t.id === c.task_id);
+      messages.push({ key, type: 'rejected', taskName: task?.title || '', reason: c.rejection_reason || '' });
+    });
+
+  state.completions
+    .filter(c => c.child_id === childId)
+    .forEach(c => {
+      const cm = state.comments.find(cm => cm.completion_id === c.id);
+      if (!cm?.parent_comment) return;
+      const key = `comment_${cm.id}`;
+      if (state.seenMessages.has(key)) return;
+      const task = state.allTasks.find(t => t.id === c.task_id);
+      messages.push({ key, type: 'reply', taskName: task?.title || '', childComment: cm.child_comment || '', parentComment: cm.parent_comment });
+    });
+
+  if (!messages.length) return;
+
+  messages.forEach(m => state.seenMessages.add(m.key));
+  sessionStorage.setItem('homey_seen', JSON.stringify([...state.seenMessages]));
+
+  document.getElementById('child-messages-list').innerHTML = messages.map(m => {
+    if (m.type === 'rejected') {
+      return `
+        <div style="background:#FEE2E2;border-radius:10px;padding:12px;">
+          <div style="font-weight:700;margin-bottom:4px;">❌ ${esc(translateTaskTitle(m.taskName))}</div>
+          <div style="font-size:0.85rem;color:#991b1b;">${m.reason ? esc(m.reason) : 'Ei hylkäyssyytä.'}</div>
+        </div>`;
+    }
+    return `
+      <div style="background:var(--bg-secondary,#f8f9fa);border-radius:10px;padding:12px;">
+        <div style="font-weight:700;margin-bottom:6px;">💬 ${esc(translateTaskTitle(m.taskName))}</div>
+        ${m.childComment ? `<div class="child-comment-box" style="margin-bottom:6px;">💬 ${esc(m.childComment)}</div>` : ''}
+        <div class="parent-reply-box">👩‍💼 ${esc(m.parentComment)}</div>
+      </div>`;
+  }).join('');
+
+  openModal('modal-child-messages');
 }
 
 function renderChildSaldo() {
@@ -3906,7 +3969,7 @@ async function unreserveTask(taskId, btn) {
 
 async function renderChildHistory() {
   const childId = state.currentUser.id;
-  const comps = state.completions.filter(c => c.child_id === childId && c.status !== 'rejected');
+  const comps = state.completions.filter(c => c.child_id === childId);
   const paidMonths = new Set(state.payments.filter(p => p.child_id === childId).map(p => p.month));
   const myBonuses = (state.bonuses || []).filter(b => b.child_id === childId);
 
@@ -4092,7 +4155,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.3</footer>
+    <footer>Homey v7.0.4</footer>
   `;
 }
 
