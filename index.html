@@ -1862,7 +1862,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.4</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.5</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2003,7 +2003,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.4</footer>
+  <footer>Homey v7.0.5</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2090,7 +2090,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.4</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.5</footer>
 </div>
 
 <script>
@@ -2720,6 +2720,7 @@ const state = {
   templates: [],         // Feature 6
   rewards: [],           // homey_rewards
   pendingClaims: [],     // homey_reward_claims pending for current child
+  completionsLoadedAll: false,    // true after full history is loaded without date limit
   challengeBonusGiven: new Set(), // Feature 3: track given bonuses in session
   dismissedReminders: new Set(),  // Feature 7
   seenMessages: new Set(),        // track shown child message notifications per session
@@ -3077,6 +3078,7 @@ async function loadAll() {
       sb.from('homey_completions')
         .select('*, homey_children(id, name, avatar, color), homey_tasks(id, title, amount)')
         .in('child_id', childIds)
+        .gte('completed_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
         .order('completed_at', { ascending: false }),
       sb.from('homey_payments')
         .select('*')
@@ -4155,7 +4157,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.4</footer>
+    <footer>Homey v7.0.5</footer>
   `;
 }
 
@@ -4300,8 +4302,27 @@ function renderParentTasks() {
     <div class="card">
       <div class="card-title">${t('completions')}${pendingCount > 0 ? ` <span class="badge badge-pending">${pendingCount} ${t('pending')}</span>` : ''}</div>
       ${compItems}
+      ${!state.completionsLoadedAll ? `<div style="text-align:center;margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="loadAllCompletions(this)">Lataa vanhemmat suoritukset</button></div>` : ''}
     </div>
   `;
+}
+
+async function loadAllCompletions(btn) {
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Ladataan...'; }
+    const childIds = state.children.map(c => c.id);
+    const { data, error } = await sb.from('homey_completions')
+      .select('*, homey_children(id, name, avatar, color), homey_tasks(id, title, amount)')
+      .in('child_id', childIds)
+      .order('completed_at', { ascending: false });
+    if (error) throw error;
+    state.completions = data || [];
+    state.completionsLoadedAll = true;
+    renderParentTasks();
+  } catch (err) {
+    showNotif(friendlyError(err), 'error', err.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Lataa vanhemmat suoritukset'; }
+  }
 }
 
 function setTasksFilter(key, value, btn) {
