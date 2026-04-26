@@ -1853,7 +1853,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.1</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1994,7 +1994,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0</footer>
+  <footer>Homey v7.0.1</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2081,7 +2081,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.1</footer>
 </div>
 
 <script>
@@ -3326,12 +3326,26 @@ function updatePinDots() {
   }
 }
 
+let _pinLockInterval = null;
+
 async function checkPin() {
-  const { data: allowed } = await sb.rpc('check_pin_allowed', { p_family_id: currentFamilyId });
-  if (allowed === false) {
-    document.getElementById('pin-error').textContent = 'Liian monta yritystä. Yritä uudelleen hetken kuluttua.';
+  const { data: seconds } = await sb.rpc('check_pin_allowed', { p_family_id: currentFamilyId });
+  if (seconds > 0) {
+    const errEl = document.getElementById('pin-error');
+    errEl.textContent = `Liian monta yritystä. Yritä uudelleen ${seconds} sekunnin kuluttua.`;
     state.pinInput = '';
     updatePinDots();
+    if (_pinLockInterval) clearInterval(_pinLockInterval);
+    _pinLockInterval = setInterval(async () => {
+      const { data: rem } = await sb.rpc('check_pin_allowed', { p_family_id: currentFamilyId });
+      if (rem <= 0) {
+        clearInterval(_pinLockInterval);
+        _pinLockInterval = null;
+        errEl.textContent = '';
+      } else {
+        errEl.textContent = `Liian monta yritystä. Yritä uudelleen ${rem} sekunnin kuluttua.`;
+      }
+    }, 1000);
     return;
   }
   const pin = padPin(state.pinInput);
@@ -4058,7 +4072,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0</footer>
+    <footer>Homey v7.0.1</footer>
   `;
 }
 
