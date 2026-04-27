@@ -3177,6 +3177,7 @@ async function loadAll() {
     state.templates = tmpl.data || [];
     state.rewards = rw.data || [];
     state.taskLibrary = lib.data || [];
+    console.log('taskLibrary:', lib.data);
 
     // Load pending reward claims (child sees own; parent sees all via child_id IN childIds)
     {
