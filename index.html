@@ -1915,7 +1915,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.10</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.11</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2056,7 +2056,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.10</footer>
+  <footer>Homey v7.0.11</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2143,7 +2143,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.10</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.11</footer>
 </div>
 
 <script>
@@ -3177,7 +3177,6 @@ async function loadAll() {
     state.templates = tmpl.data || [];
     state.rewards = rw.data || [];
     state.taskLibrary = lib.data || [];
-    console.log('taskLibrary:', lib.data);
 
     // Load pending reward claims (child sees own; parent sees all via child_id IN childIds)
     {
@@ -4221,7 +4220,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.10</footer>
+    <footer>Homey v7.0.11</footer>
   `;
 }
 
@@ -5221,6 +5220,7 @@ async function addToTaskLibrary() {
 }
 
 async function removeFromTaskLibrary(id) {
+  if (!confirm('Haluatko varmasti poistaa tämän tehtävän kirjastosta?')) return;
   const { error } = await sb.from('homey_task_library').delete().eq('id', id);
   if (error) { showNotif(friendlyError(error), 'error', error.message); return; }
   state.taskLibrary = state.taskLibrary.filter(item => item.id !== id);
