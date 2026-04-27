@@ -1862,7 +1862,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.5</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.6</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2003,7 +2003,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.5</footer>
+  <footer>Homey v7.0.6</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2090,7 +2090,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.5</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.6</footer>
 </div>
 
 <script>
@@ -4157,7 +4157,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.5</footer>
+    <footer>Homey v7.0.6</footer>
   `;
 }
 
@@ -4343,18 +4343,42 @@ async function approveComp(id, btn) {
     const { error } = await sb.from('homey_completions').update({ status: 'approved' }).eq('id', id);
     if (error) throw error;
 
-    // If child chose points, add to points_balance
+    // Capture comp data before loadAll() overwrites state
     const comp = state.completions.find(c => c.id === id);
-    if (comp?.chosen_reward_type === 'points') {
-      const task = state.allTasks.find(t => t.id === comp.task_id);
+    const compChildId = comp?.child_id;
+    const compTaskId = comp?.task_id;
+    const compRewardType = comp?.chosen_reward_type;
+
+    // If child chose points, add to points_balance
+    if (compRewardType === 'points') {
+      const task = state.allTasks.find(t => t.id === compTaskId);
       const pts = task?.points ?? Math.round((task?.amount ?? 0) * 10);
-      const child = state.children.find(c => c.id === comp.child_id);
+      const child = state.children.find(c => c.id === compChildId);
       const currentPts = child?.points_balance ?? 0;
-      await sb.from('homey_children').update({ points_balance: currentPts + pts }).eq('id', comp.child_id);
+      await sb.from('homey_children').update({ points_balance: currentPts + pts }).eq('id', compChildId);
     }
 
     showToast(t('taskApproved'), 'success');
-    await loadAll();
+    await loadAll(); // state.completions now has approved status — needed for calcStreak()
+
+    // Update persistent stats on homey_children
+    if (compChildId) {
+      const child = state.children.find(c => c.id === compChildId);
+      const task = state.allTasks.find(t => t.id === compTaskId);
+      if (child) {
+        const newTotalCompletions = (child.total_completions ?? 0) + 1;
+        const newTotalEarned = (child.total_earned ?? 0) + (compRewardType !== 'points' ? Number(task?.amount ?? 0) : 0);
+        const newStreak = calcStreak(compChildId);
+        const newLongest = Math.max(child.longest_streak ?? 0, newStreak);
+        await sb.from('homey_children').update({
+          total_completions: newTotalCompletions,
+          total_earned: newTotalEarned,
+          current_streak: newStreak,
+          longest_streak: newLongest,
+        }).eq('id', compChildId);
+      }
+    }
+
     renderParentPending();
     renderParentOverview();
     updatePendingBadge();
@@ -5593,36 +5617,31 @@ function calcStreak(childId) {
 
 // ===== ACHIEVEMENTS =====
 const ACHIEVEMENTS = [
-  { id: 'first',    icon: '🌟', key: 'ach_first',    check: (comps, earned) => comps >= 1 },
-  { id: 'tasks5',   icon: '⭐', key: 'ach_tasks5',   check: (comps, earned) => comps >= 5 },
-  { id: 'tasks10',  icon: '🏆', key: 'ach_tasks10',  check: (comps, earned) => comps >= 10 },
-  { id: 'tasks25',  icon: '💎', key: 'ach_tasks25',  check: (comps, earned) => comps >= 25 },
-  { id: 'tasks50',  icon: '👑', key: 'ach_tasks50',  check: (comps, earned) => comps >= 50 },
-  { id: 'earn10',   icon: '💰', key: 'ach_earn10',   check: (comps, earned) => earned >= 10 },
-  { id: 'earn50',   icon: '🎩', key: 'ach_earn50',   check: (comps, earned) => earned >= 50 },
-  { id: 'earn100',  icon: '🚀', key: 'ach_earn100',  check: (comps, earned) => earned >= 100 },
-  { id: 'streak3',  icon: '🔥', key: 'ach_streak3',  check: (comps, earned, streak) => streak >= 3 },
-  { id: 'streak7',  icon: '⚡', key: 'ach_streak7',  check: (comps, earned, streak) => streak >= 7 },
+  { id: 'first',    icon: '🌟', key: 'ach_first',    check: (child, streak) => (child.total_completions ?? 0) >= 1 },
+  { id: 'tasks5',   icon: '⭐', key: 'ach_tasks5',   check: (child, streak) => (child.total_completions ?? 0) >= 5 },
+  { id: 'tasks10',  icon: '🏆', key: 'ach_tasks10',  check: (child, streak) => (child.total_completions ?? 0) >= 10 },
+  { id: 'tasks25',  icon: '💎', key: 'ach_tasks25',  check: (child, streak) => (child.total_completions ?? 0) >= 25 },
+  { id: 'tasks50',  icon: '👑', key: 'ach_tasks50',  check: (child, streak) => (child.total_completions ?? 0) >= 50 },
+  { id: 'earn10',   icon: '💰', key: 'ach_earn10',   check: (child, streak) => (child.total_earned ?? 0) >= 10 },
+  { id: 'earn50',   icon: '🎩', key: 'ach_earn50',   check: (child, streak) => (child.total_earned ?? 0) >= 50 },
+  { id: 'earn100',  icon: '🚀', key: 'ach_earn100',  check: (child, streak) => (child.total_earned ?? 0) >= 100 },
+  { id: 'streak3',  icon: '🔥', key: 'ach_streak3',  check: (child, streak) => streak >= 3 },
+  { id: 'streak7',  icon: '⚡', key: 'ach_streak7',  check: (child, streak) => streak >= 7 },
 ];
 
 function renderGamification() {
   const card = document.getElementById('child-gamification-card');
   if (!card) return;
   const childId = state.currentUser.id;
-  const approved = state.completions.filter(c => c.child_id === childId && c.status === 'approved');
-  const earned = approved.reduce((s, c) => {
-    const task = state.allTasks.find(tt => tt.id === c.task_id);
-    return s + Number(task?.amount ?? c.task_price ?? 0);
-  }, 0);
-  const streak = calcStreak(childId);
-  const compCount = approved.length;
+  const child = state.children.find(c => c.id === childId) || state.currentUser;
+  const streak = child.current_streak ?? calcStreak(childId);
 
   const streakHtml = streak >= 2
     ? `<div style="margin-bottom:12px;"><span class="streak-badge">🔥 ${streak} ${t('streak')}</span></div>`
     : '';
 
   const achItems = ACHIEVEMENTS.map(a => {
-    const unlocked = a.check(compCount, earned, streak);
+    const unlocked = a.check(child, streak);
     return `
       <div class="ach-item ${unlocked ? 'earned' : 'locked'}" title="${t(a.key)}">
         <div class="ach-icon">${a.icon}</div>
