@@ -1532,8 +1532,29 @@
       <input type="text" id="edit-task-name" class="input" />
     </div>
     <div class="form-group">
+      <label class="input-label">Palkkiotyyppi</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label style="flex:1;min-width:80px;display:flex;align-items:center;gap:6px;padding:10px;border:2px solid var(--border);border-radius:8px;cursor:pointer;">
+          <input type="radio" name="edit-reward-type" value="cash" checked onchange="onEditRewardTypeChange()" style="accent-color:var(--primary);width:16px;height:16px;" />
+          <span style="font-weight:600;font-size:0.85rem;">💵 Euroja</span>
+        </label>
+        <label style="flex:1;min-width:80px;display:flex;align-items:center;gap:6px;padding:10px;border:2px solid var(--border);border-radius:8px;cursor:pointer;">
+          <input type="radio" name="edit-reward-type" value="points" onchange="onEditRewardTypeChange()" style="accent-color:var(--primary);width:16px;height:16px;" />
+          <span style="font-weight:600;font-size:0.85rem;">⭐ Pisteitä</span>
+        </label>
+        <label style="flex:1;min-width:80px;display:flex;align-items:center;gap:6px;padding:10px;border:2px solid var(--border);border-radius:8px;cursor:pointer;">
+          <input type="radio" name="edit-reward-type" value="child_choice" onchange="onEditRewardTypeChange()" style="accent-color:var(--primary);width:16px;height:16px;" />
+          <span style="font-weight:600;font-size:0.85rem;">👶 Lapsen valinta</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group" id="edit-task-price-group">
       <label class="input-label" data-i18n="price">Hinta (€)</label>
-      <input type="number" id="edit-task-price" class="input" min="0" step="0.10" />
+      <input type="number" id="edit-task-price" class="input" min="0" step="0.10" oninput="onEditTaskPriceInput()" />
+    </div>
+    <div class="form-group" id="edit-task-points-group" style="display:none;">
+      <label class="input-label">Pisteet (⭐)</label>
+      <input type="number" id="edit-task-points" class="input" placeholder="Pisteet" min="0" step="1" />
     </div>
     <div class="form-group">
       <label class="input-label" data-i18n="recurrence">Toistuvuus</label>
@@ -1862,7 +1883,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.6</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.7</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2003,7 +2024,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.6</footer>
+  <footer>Homey v7.0.7</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2090,7 +2111,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.6</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.7</footer>
 </div>
 
 <script>
@@ -4157,7 +4178,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.6</footer>
+    <footer>Homey v7.0.7</footer>
   `;
 }
 
@@ -5436,6 +5457,11 @@ function openEditTaskModal(taskId) {
   document.querySelectorAll('input[name="edit-task-type"]').forEach(r => { r.checked = r.value === task.type; });
   document.getElementById('edit-assigned-to-group').style.display = task.type === 'assigned' ? 'block' : 'none';
 
+  const rt = task.reward_type || 'cash';
+  document.querySelectorAll('input[name="edit-reward-type"]').forEach(r => { r.checked = r.value === rt; });
+  document.getElementById('edit-task-points').value = task.points ?? '';
+  onEditRewardTypeChange();
+
   openModal('modal-edit-task');
 }
 
@@ -5444,13 +5470,36 @@ function toggleEditAssignedTo() {
   document.getElementById('edit-assigned-to-group').style.display = type === 'assigned' ? 'block' : 'none';
 }
 
+function onEditRewardTypeChange() {
+  const rt = document.querySelector('input[name="edit-reward-type"]:checked')?.value || 'cash';
+  const showPrice = rt === 'cash' || rt === 'child_choice';
+  const showPoints = rt === 'points' || rt === 'child_choice';
+  document.getElementById('edit-task-price-group').style.display = showPrice ? 'block' : 'none';
+  document.getElementById('edit-task-points-group').style.display = showPoints ? 'block' : 'none';
+  if (showPoints) {
+    const price = parseFloat(document.getElementById('edit-task-price').value) || 0;
+    const pointsEl = document.getElementById('edit-task-points');
+    if (!pointsEl.value) pointsEl.value = Math.round(price * 10);
+  }
+}
+
+function onEditTaskPriceInput() {
+  const rt = document.querySelector('input[name="edit-reward-type"]:checked')?.value || 'cash';
+  if (rt === 'points' || rt === 'child_choice') {
+    const price = parseFloat(document.getElementById('edit-task-price').value) || 0;
+    document.getElementById('edit-task-points').value = Math.round(price * 10);
+  }
+}
+
 async function saveEditTask(btn) {
   const name = document.getElementById('edit-task-name').value.trim();
+  const reward_type = document.querySelector('input[name="edit-reward-type"]:checked')?.value || 'cash';
+  const showPrice = reward_type === 'cash' || reward_type === 'child_choice';
   const priceVal = document.getElementById('edit-task-price').value;
   if (!name) { showToast(t('enterTaskName'), 'error'); return; }
-  if (priceVal === '') { showToast(t('enterPrice'), 'error'); return; }
-  const price = parseFloat(priceVal);
-  if (isNaN(price) || price < 0) { showToast(t('enterValidPrice'), 'error'); return; }
+  if (showPrice && priceVal === '') { showToast(t('enterPrice'), 'error'); return; }
+  const price = showPrice ? parseFloat(priceVal) : 0;
+  if (showPrice && (isNaN(price) || price < 0)) { showToast(t('enterValidPrice'), 'error'); return; }
 
   const type = document.querySelector('input[name="edit-task-type"]:checked')?.value || 'free';
   const assignedRaw = document.getElementById('edit-task-assigned').value;
@@ -5458,12 +5507,14 @@ async function saveEditTask(btn) {
   const recurrence = document.getElementById('edit-task-recurrence').value || null;
   const editDeadlineRaw = document.getElementById('edit-task-deadline').value;
   const deadline = editDeadlineRaw ? new Date(editDeadlineRaw).toISOString() : null;
+  const pointsRaw = document.getElementById('edit-task-points').value;
+  const points = (reward_type !== 'cash' && pointsRaw !== '') ? parseInt(pointsRaw, 10) : null;
 
   const origText = btn ? btn.textContent : null;
   try {
     if (btn) { btn.disabled = true; btn.textContent = t('saving'); }
     const { error } = await sb.from('homey_tasks')
-      .update({ title: name, amount: Number(price), type, assigned_to, recurrence, deadline })
+      .update({ title: name, amount: Number(price), type, assigned_to, recurrence, deadline, reward_type, points })
       .eq('id', _editTaskId);
     if (error) throw error;
     showToast(t('taskUpdated'), 'success');
