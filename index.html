@@ -1417,6 +1417,10 @@
     <!-- TAB 1: Valmis lista -->
     <div id="task-tab-template">
       <div class="task-template-grid" id="task-template-grid"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input type="text" id="library-new-title" class="input" style="flex:1;font-size:0.85rem;" placeholder="Uusi tehtävä kirjastoon..." />
+        <button class="btn btn-primary btn-sm" onclick="addToTaskLibrary()">Lisää tehtävä</button>
+      </div>
     </div>
 
     <!-- TAB 2: Oma tehtävä -->
@@ -1911,7 +1915,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.8</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.10</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2052,7 +2056,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.8</footer>
+  <footer>Homey v7.0.10</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2139,7 +2143,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.8</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.10</footer>
 </div>
 
 <script>
@@ -2767,6 +2771,7 @@ const state = {
   challenges: [],        // Feature 3
   parents: [],           // Feature 5
   templates: [],         // Feature 6
+  taskLibrary: [],       // homey_task_library
   rewards: [],           // homey_rewards
   pendingClaims: [],     // homey_reward_claims pending for current child
   completionsLoadedAll: false,    // true after full history is loaded without date limit
@@ -3123,7 +3128,7 @@ async function loadAll() {
       return;
     }
 
-    const [co, p, b, ch, par, tmpl, rw] = await Promise.all([
+    const [co, p, b, ch, par, tmpl, rw, lib] = await Promise.all([
       sb.from('homey_completions')
         .select('*, homey_children(id, name, avatar, color), homey_tasks(id, title, amount)')
         .in('child_id', childIds)
@@ -3154,11 +3159,16 @@ async function loadAll() {
         .select('*')
         .eq('family_id', currentFamilyId)
         .order('created_at'),
+      sb.from('homey_task_library')
+        .select('*')
+        .eq('family_id', currentFamilyId)
+        .order('title'),
     ]);
     if (co.error) console.error('homey_completions:', co.error.message);
     if (p.error) console.error('homey_payments:', p.error.message);
     if (b.error) console.error('homey_bonuses:', b.error.message);
     if (rw.error) console.error('homey_rewards:', rw.error.message);
+    if (lib.error) console.error('homey_task_library:', lib.error.message);
     state.completions = co.data || [];
     state.payments = p.data || [];
     state.bonuses = b.data || [];
@@ -3166,6 +3176,7 @@ async function loadAll() {
     state.parents = par.data || [];
     state.templates = tmpl.data || [];
     state.rewards = rw.data || [];
+    state.taskLibrary = lib.data || [];
 
     // Load pending reward claims (child sees own; parent sees all via child_id IN childIds)
     {
@@ -3556,7 +3567,8 @@ function setupRealtime() {
           const reward = state.rewards.find(r => r.id === payload.new.reward_id);
           const rewardName = reward?.name || 'etu';
           if (payload.new.status === 'approved') {
-            showNotif('✅ Lunastus hyväksytty: ' + rewardName, 'success');
+            const approvedPts = payload.new.approved_cost ?? reward?.points_cost ?? '?';
+            showNotif('✅ Lunastus hyväksytty: ' + rewardName + ' (' + approvedPts + ' pistettä)', 'success');
           } else if (payload.new.status === 'rejected') {
             showNotif('❌ Lunastus hylätty: ' + rewardName, 'error');
           }
@@ -4208,7 +4220,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.8</footer>
+    <footer>Homey v7.0.10</footer>
   `;
 }
 
@@ -4322,6 +4334,11 @@ function renderParentTasks() {
       </div>
       <div style="margin-top:6px;">
         <input id="claim-comment-${esc(String(claim.id))}" class="input" style="font-size:0.85rem;margin-bottom:6px;" placeholder="Kommentti vanhemmalta (valinnainen)" type="text">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <label style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap;">Hyväksy</label>
+          <input id="claim-override-cost-${esc(String(claim.id))}" class="input" type="number" min="0" value="${reward?.points_cost ?? ''}" style="font-size:0.85rem;width:80px;padding:4px 8px;">
+          <label style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap;">pistettä</label>
+        </div>
         <div class="pending-actions">
           <button class="btn btn-success btn-sm" onclick="approveRewardClaim('${esc(String(claim.id))}', this)">✅ Hyväksy</button>
           <button class="btn btn-danger btn-sm" onclick="rejectRewardClaim('${esc(String(claim.id))}', this)">❌ Hylkää</button>
@@ -4475,9 +4492,16 @@ async function confirmReject(confirmBtn) {
 
 async function approveRewardClaim(claimId, btn) {
   const comment = document.getElementById('claim-comment-' + claimId)?.value.trim() || null;
+  const overrideInput = document.getElementById('claim-override-cost-' + claimId);
+  const claim = state.pendingClaims.find(c => String(c.id) === String(claimId));
+  const reward = state.rewards.find(r => r.id === claim?.reward_id);
+  const originalCost = reward?.points_cost ?? null;
+  const rawVal = overrideInput?.value.trim();
+  const parsedVal = rawVal !== '' ? parseInt(rawVal, 10) : NaN;
+  const overrideCost = (!isNaN(parsedVal) && parsedVal !== originalCost) ? parsedVal : null;
   try {
     if (btn) { btn.disabled = true; btn.textContent = t('saving'); }
-    const { error } = await sb.rpc('approve_reward_claim', { p_claim_id: claimId, p_parent_comment: comment });
+    const { error } = await sb.rpc('approve_reward_claim', { p_claim_id: claimId, p_parent_comment: comment, p_override_cost: overrideCost });
     if (error) {
       if (error.message?.includes('Insufficient points balance')) {
         showNotif('Lapsella ei ole tarpeeksi pisteitä', 'error');
@@ -5167,11 +5191,41 @@ function openAddTaskModal() {
 
 function renderTaskTemplateGrid() {
   const grid = document.getElementById('task-template-grid');
-  grid.innerHTML = t('taskList').map(name => {
-    const sel = selectedTemplateName === name ? ' selected' : '';
-    const escaped = esc(name);
-    return `<button class="task-template-btn${sel}" data-name="${escaped}" onclick="selectTemplate(this.dataset.name)">${escaped}</button>`;
+  if (!state.taskLibrary.length) {
+    grid.innerHTML = '<div class="text-muted" style="grid-column:1/-1;font-size:0.875rem;padding:4px 0;">Kirjasto on tyhjä — lisää tehtäviä alla.</div>';
+    return;
+  }
+  grid.innerHTML = state.taskLibrary.map(item => {
+    const sel = selectedTemplateName === item.title ? ' selected' : '';
+    const escaped = esc(item.title);
+    return `<div style="display:flex;align-items:stretch;gap:4px;">
+      <button class="task-template-btn${sel}" style="flex:1;" data-name="${escaped}" onclick="selectTemplate(this.dataset.name)">${escaped}</button>
+      <button onclick="removeFromTaskLibrary('${esc(String(item.id))}')" style="padding:4px 8px;border:2px solid var(--border);border-radius:var(--radius-sm);background:#fff;cursor:pointer;font-size:0.85rem;" title="Poista kirjastosta">❌</button>
+    </div>`;
   }).join('');
+}
+
+async function addToTaskLibrary() {
+  const input = document.getElementById('library-new-title');
+  const title = input?.value.trim();
+  if (!title) return;
+  const { data, error } = await sb.from('homey_task_library')
+    .insert({ family_id: currentFamilyId, title })
+    .select('id, title')
+    .single();
+  if (error) { showNotif(friendlyError(error), 'error', error.message); return; }
+  state.taskLibrary = [...state.taskLibrary, data].sort((a, b) => a.title.localeCompare(b.title, 'fi'));
+  input.value = '';
+  renderTaskTemplateGrid();
+}
+
+async function removeFromTaskLibrary(id) {
+  const { error } = await sb.from('homey_task_library').delete().eq('id', id);
+  if (error) { showNotif(friendlyError(error), 'error', error.message); return; }
+  state.taskLibrary = state.taskLibrary.filter(item => item.id !== id);
+  const stillExists = state.taskLibrary.some(item => item.title === selectedTemplateName);
+  if (!stillExists) selectedTemplateName = null;
+  renderTaskTemplateGrid();
 }
 
 function selectTemplate(name) {
