@@ -49,6 +49,7 @@
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       letter-spacing: -0.2px;
+      overflow-x: hidden;
     }
 
     /* ===== VIEWS ===== */
@@ -64,7 +65,7 @@
     .text-center { text-align: center; }
     .text-muted { color: var(--text-muted); }
     .w-full { width: 100%; }
-    .subtitle { color: var(--text-muted); font-size: 0.88rem; letter-spacing: -0.1px; }
+    .subtitle { color: var(--text-muted); font-size: 12px; letter-spacing: -0.1px; }
     .divider { height: 1px; background: var(--border); margin: 8px 0; }
 
     /* ===== CARD ===== */
@@ -119,7 +120,7 @@
     .btn-full { width: 100%; }
 
     /* ===== APP HEADER ===== */
-    .app-header { position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(242,242,247,0.85); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .app-header { position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(242,242,247,0.85); padding: 0 20px; height: 52px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
     .header-actions { display: flex; align-items: center; gap: 8px; }
     .header-icon-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(142,142,147,0.12); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--text); transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
     .header-icon-btn:hover { background: rgba(142,142,147,0.2); }
@@ -277,6 +278,7 @@
     .parent-nav-btn .nav-icon { font-size: 1.5rem; line-height: 1; }
 
     /* ===== SIDEBAR (DESKTOP) ===== */
+    .parent-sidebar { display: none; }
     .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 20px; margin-bottom: 8px; }
     .sidebar-brand-icon { font-size: 1.8rem; }
     .sidebar-family-name { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.3px; }
@@ -288,7 +290,7 @@
     .sidebar-nav-btn .sidebar-badge { margin-left: auto; }
     .sidebar-utils { padding: 12px; }
     .sidebar-footer { padding: 12px 20px; border-top: 1px solid var(--border); }
-    .sidebar-logout-btn { display: flex; align-items: center; gap: 8px; color: var(--danger); font-size: 0.88rem; font-weight: 600; background: none; border: none; cursor: pointer; padding: 10px 14px; border-radius: 12px; width: 100%; transition: background 0.15s; }
+    .sidebar-logout-btn { display: flex; align-items: center; gap: 8px; color: #FF3B30; font-size: 0.88rem; font-weight: 500; background: none; border: none; cursor: pointer; padding: 10px 14px; border-radius: 12px; width: 100%; transition: background 0.15s; }
     .sidebar-logout-btn:hover { background: rgba(255,59,48,0.08); }
 
     /* ===== FAB ===== */
@@ -374,6 +376,10 @@
     .chart-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; }
     .chart-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
+    /* ===== OFFLINE BANNER ===== */
+    #offline-banner { background: #854F0B; color: #fff; text-align: center; padding: 6px 16px; font-size: 12px; font-weight: normal; display: none; position: sticky; top: 52px; z-index: 90; }
+    #offline-banner.show { display: block; }
+
     /* ===== MISC ===== */
     .welcome-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; }
     .reminder-card { background: rgba(255,149,0,0.1); border-radius: 14px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 10px; border-left: 3px solid var(--warning); margin-bottom: 12px; }
@@ -399,13 +405,13 @@
     /* ===== DARK MODE ===== */
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #0A0A0F; --card: #1C1C1E; --text: #FFFFFF; --text-muted: #8E8E93;
+        --bg: #0A0A0F; --card: #2C2C2E; --text: #FFFFFF; --text-muted: #8E8E93;
         --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15);
         --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3);
         --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
       }
     }
-    [data-theme="dark"] { --bg: #0A0A0F; --card: #1C1C1E; --text: #FFFFFF; --text-muted: #8E8E93; --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15); --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3); --shadow-lg: 0 8px 40px rgba(0,0,0,0.5); }
+    [data-theme="dark"] { --bg: #0A0A0F; --card: #2C2C2E; --text: #FFFFFF; --text-muted: #8E8E93; --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15); --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3); --shadow-lg: 0 8px 40px rgba(0,0,0,0.5); }
     [data-theme="dark"] body { background: var(--bg); }
     [data-theme="dark"] .login-card { color: var(--text); }
     [data-theme="dark"] .modal { background: #2C2C2E; color: var(--text); }
@@ -439,6 +445,7 @@
     @media (min-width: 768px) {
       .parent-layout { flex-direction: row; }
       .parent-nav { display: none; }
+      .parent-sidebar { display: flex; flex-direction: column; width: 240px; min-width: 200px; border-right: 1px solid var(--border); background: var(--card); min-height: 100%; position: sticky; top: 0; align-self: flex-start; max-height: 100vh; overflow-y: auto; }
       .parent-panels { padding: 24px; padding-bottom: 24px; }
       .child-col-left, .child-col-right { width: 50%; }
       .child-grid { grid-template-columns: repeat(4, 1fr); }
@@ -1093,7 +1100,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.1</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.3</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1160,7 +1167,7 @@
 <div id="view-child" class="view">
   <div class="app-header">
     <div>
-      <div class="app-header h1" style="font-size:1.25rem;font-weight:800;">Homey</div>
+      <div class="app-header h1" style="font-size:18px;font-weight:600;">Homey</div>
       <div class="subtitle" id="child-header-name"></div>
     </div>
     <div class="header-actions">
@@ -1234,7 +1241,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.2.1</footer>
+  <footer>Homey v7.2.3</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -1245,7 +1252,7 @@
   <!-- Mobile top header (hidden at 768px+) -->
   <div class="app-header">
     <div>
-      <div style="font-size:1.25rem;font-weight:800;color:#fff;">Homey</div>
+      <div style="font-size:18px;font-weight:600;">Homey</div>
       <div class="subtitle" data-i18n="parentView">Vanhemman näkymä</div>
     </div>
     <div class="header-actions">
@@ -1321,7 +1328,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.1</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.3</footer>
 </div>
 
 <script>
@@ -3435,7 +3442,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.2.1</footer>
+    <footer>Homey v7.2.3</footer>
   `;
 }
 
