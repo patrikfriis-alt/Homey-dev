@@ -1073,6 +1073,33 @@
       box-shadow: 0 2px 8px rgba(255,107,53,0.35);
     }
 
+    /* ===== STREAK CARD ===== */
+    .streak-card {
+      background: linear-gradient(135deg,#ff6b35 0%,#f7c948 100%);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      color: #fff;
+    }
+    .streak-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.97rem;
+      margin-bottom: 6px;
+    }
+    .streak-row strong { font-size: 1.15rem; font-weight: 800; }
+    .streak-status {
+      margin-top: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 6px 10px;
+      border-radius: var(--radius-pill);
+    }
+    .streak-status.safe { background: rgba(0,0,0,0.18); }
+    .streak-status.warn { background: rgba(0,0,0,0.22); }
+    .streak-status.start { background: rgba(0,0,0,0.18); }
+
     /* ===== DAY MATRIX ===== */
     .day-btn { flex:1; padding:6px 0; border:2px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-weight:700; font-size:0.78rem; cursor:pointer; transition:background 0.15s,color 0.15s,border-color 0.15s; }
     .day-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
@@ -1915,7 +1942,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.0.11</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.1.2</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2056,7 +2083,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.0.11</footer>
+  <footer>Homey v7.1.2</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2143,7 +2170,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.0.11</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.1.2</footer>
 </div>
 
 <script>
@@ -3408,14 +3435,15 @@ async function checkPin() {
     state.pinInput = '';
     updatePinDots();
     if (_pinLockInterval) clearInterval(_pinLockInterval);
-    _pinLockInterval = setInterval(async () => {
-      const { data: rem } = await sb.rpc('check_pin_allowed', { p_family_id: currentFamilyId });
-      if (rem <= 0) {
+    let remaining = seconds;
+    _pinLockInterval = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
         clearInterval(_pinLockInterval);
         _pinLockInterval = null;
         errEl.textContent = '';
       } else {
-        errEl.textContent = `Liian monta yritystä. Yritä uudelleen ${rem} sekunnin kuluttua.`;
+        errEl.textContent = `Liian monta yritystä. Yritä uudelleen ${remaining} sekunnin kuluttua.`;
       }
     }, 1000);
     return;
@@ -3428,8 +3456,9 @@ async function checkPin() {
       updatePinDots();
       return;
     }
+    const adminPinIsHashed = state.adminPin.length === 64;
     const hashedAdmin = await hashPin(pin, currentFamilyId);
-    if (pin === padPin(state.adminPin)) {
+    if (!adminPinIsHashed && pin === padPin(state.adminPin)) {
       // Plain text match → migrate to hash
       await sb.from('homey_families').update({ admin_pin: hashedAdmin }).eq('id', currentFamilyId);
       state.adminPin = hashedAdmin;
@@ -3450,8 +3479,9 @@ async function checkPin() {
   } else {
     const child = state.children.find(c => c.id === state.selectedChildId);
     if (child) {
+      const childPinIsHashed = child.pin.length === 64;
       const hashedChild = await hashPin(pin, child.id);
-      if (padPin(child.pin) === pin) {
+      if (!childPinIsHashed && padPin(child.pin) === pin) {
         // Plain text match → migrate to hash
         await sb.from('homey_children').update({ pin: hashedChild }).eq('id', child.id);
         child.pin = hashedChild;
@@ -3813,7 +3843,7 @@ function renderAssignedTasks() {
   const myTasks = state.tasks.filter(t => {
     if (t.type !== 'assigned' || String(t.assigned_to) !== String(childId)) return false;
     if (t.deadline) { const info = getDeadlineInfo(t.deadline); if (info.isExpired) return false; }
-    if (Array.isArray(t.active_days) && t.active_days.length) { if (!t.active_days.includes(new Date().getDay())) return false; }
+    if (Array.isArray(t.active_days) && t.active_days.length) { if (!t.active_days.map(Number).includes(new Date().getDay())) return false; }
     return true;
   });
   const container = document.getElementById('assigned-tasks-list');
@@ -3859,7 +3889,7 @@ function renderFreeTasks() {
   const freeTasks = state.tasks.filter(t => {
     if (t.type !== 'free') return false;
     if (t.deadline) { const info = getDeadlineInfo(t.deadline); if (info.isExpired) return false; }
-    if (Array.isArray(t.active_days) && t.active_days.length) { if (!t.active_days.includes(new Date().getDay())) return false; }
+    if (Array.isArray(t.active_days) && t.active_days.length) { if (!t.active_days.map(Number).includes(new Date().getDay())) return false; }
     return true;
   });
   const container = document.getElementById('free-tasks-list');
@@ -3958,12 +3988,16 @@ async function submitMarkDoneFromModal(withComment) {
 }
 
 async function submitRewardChoice(choice) {
+  if (!_pendingRewardTaskId) return;
   closeModal('modal-reward-choice');
   const taskId = _pendingRewardTaskId;
   const comment = _pendingRewardComment;
-  _pendingRewardTaskId = null;
-  _pendingRewardComment = '';
-  await markDone(taskId, null, comment, choice);
+  try {
+    await markDone(taskId, null, comment, choice);
+  } finally {
+    _pendingRewardTaskId = null;
+    _pendingRewardComment = '';
+  }
 }
 
 async function markDone(taskId, btn, comment = '', chosen_reward_type = 'cash') {
@@ -4091,7 +4125,7 @@ async function renderChildHistory() {
       return `
         <div class="completion-item">
           <div style="flex:1;min-width:0;">
-            <div>${esc(translateTaskTitle(task?.title || ''))}</div>
+            <div>${task ? esc(translateTaskTitle(task.title || '')) : '<em style="color:var(--text-muted)">Poistettu tehtävä</em>'}</div>
             <div class="completion-date">${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}</div>
             ${reasonHtml}${commentHtml}
           </div>
@@ -4220,7 +4254,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.0.11</footer>
+    <footer>Homey v7.1.2</footer>
   `;
 }
 
@@ -5299,6 +5333,7 @@ async function saveTask() {
   const assigned_to = (type === 'assigned' && assignedRaw) ? assignedRaw : null;
   const recurrence = document.getElementById('new-task-recurrence').value || null;
   const deadlineRaw = document.getElementById('new-task-deadline').value;
+  if (deadlineRaw && isNaN(new Date(deadlineRaw).getTime())) { showToast('Virheellinen päivämäärä', 'error'); return; }
   const deadline = deadlineRaw ? new Date(deadlineRaw).toISOString() : null;
   const pointsRaw = document.getElementById('new-task-points').value;
   const points = (reward_type !== 'cash' && pointsRaw !== '') ? parseInt(pointsRaw, 10) : null;
@@ -5618,6 +5653,7 @@ async function saveEditTask(btn) {
   const assigned_to = (type === 'assigned' && assignedRaw) ? assignedRaw : null;
   const recurrence = document.getElementById('edit-task-recurrence').value || null;
   const editDeadlineRaw = document.getElementById('edit-task-deadline').value;
+  if (editDeadlineRaw && isNaN(new Date(editDeadlineRaw).getTime())) { showToast('Virheellinen päivämäärä', 'error'); return; }
   const deadline = editDeadlineRaw ? new Date(editDeadlineRaw).toISOString() : null;
   const pointsRaw = document.getElementById('edit-task-points').value;
   const points = (reward_type !== 'cash' && pointsRaw !== '') ? parseInt(pointsRaw, 10) : null;
@@ -5799,10 +5835,28 @@ function renderGamification() {
   const childId = state.currentUser.id;
   const child = state.children.find(c => c.id === childId) || state.currentUser;
   const streak = child.current_streak ?? calcStreak(childId);
+  const longestStreak = child.longest_streak ?? streak;
 
-  const streakHtml = streak >= 2
-    ? `<div style="margin-bottom:12px;"><span class="streak-badge">🔥 ${streak} ${t('streak')}</span></div>`
-    : '';
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const hasTodayApproved = state.completions.some(
+    c => c.child_id === childId && c.status === 'approved' && c.completed_at && c.completed_at.slice(0, 10) === todayStr
+  );
+
+  let statusMsg;
+  if (hasTodayApproved) {
+    statusMsg = `<div class="streak-status safe">✅ Putki turvassa tänään!</div>`;
+  } else if (streak >= 1) {
+    statusMsg = `<div class="streak-status warn">⚠️ Tee tehtävä tänään tai putki katkeaa!</div>`;
+  } else {
+    statusMsg = `<div class="streak-status start">💪 Aloita putki tekemällä tehtävä tänään!</div>`;
+  }
+
+  const streakHtml = `
+    <div class="streak-card" style="margin-bottom:14px;">
+      <div class="streak-row"><span>🔥 Nykyinen putki</span><strong>${streak} päivää</strong></div>
+      <div class="streak-row"><span>🏆 Pisin putki</span><strong>${longestStreak} päivää</strong></div>
+      ${statusMsg}
+    </div>`;
 
   const achItems = ACHIEVEMENTS.map(a => {
     const unlocked = a.check(child, streak);
@@ -5995,9 +6049,9 @@ async function saveParentReply(btn) {
 // ===== FEATURE 3: WEEKLY CHALLENGE =====
 function getWeekStart() {
   const now = new Date(); now.setHours(0,0,0,0);
-  const day = now.getDay(); // 0=Sun
-  const diff = day === 0 ? -6 : 1 - day; // Monday
-  return new Date(now.getTime() + diff * 86400000);
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  return weekStart;
 }
 
 function getThisWeekCompCount(childId) {
