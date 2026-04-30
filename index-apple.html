@@ -17,15 +17,16 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --primary: #007AFF;
-      --primary-light: #EAF2FF;
-      --primary-mid: #C8DCFF;
-      --primary-dark: #004FC4;
-      --primary-muted: #5AC8FA;
+      --primary: #4B5CC4;
+      --primary-light: rgba(75,92,196,0.12);
+      --primary-mid: rgba(75,92,196,0.25);
+      --primary-dark: #3D4EAA;
+      --primary-muted: #7B68EE;
+      --accent-secondary: #E8821A;
       --dark-bg: #000000;
       --dark-surface: #1C1C1E;
       --dark-muted: #8E8E93;
-      --bg: #F2F2F7;
+      --bg: #F5F4F8;
       --card: #FFFFFF;
       --text: #1C1C1E;
       --text-muted: #8E8E93;
@@ -96,7 +97,7 @@
     .form-group { margin-bottom: 14px; }
     .input-label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.4px; text-transform: uppercase; }
     .input { width: 100%; padding: 13px 16px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.97rem; color: var(--text); background: var(--bg); transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); -webkit-appearance: none; font-family: inherit; }
-    .input:focus { outline: none; border-color: var(--primary); background: var(--card); box-shadow: 0 0 0 4px rgba(0,122,255,0.12); }
+    .input:focus { outline: none; border-color: var(--primary); background: var(--card); box-shadow: 0 0 0 4px rgba(75,92,196,0.12); }
     select.input { cursor: pointer; }
 
     /* ===== BUTTONS ===== */
@@ -104,7 +105,7 @@
     .btn:active { transform: scale(0.97); }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
     .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: #0066DD; }
+    .btn-primary:hover { background: #3D4EAA; }
     .btn-outline { background: var(--bg); color: var(--primary); border: 1.5px solid var(--border); }
     .btn-outline:hover { background: var(--primary-light); border-color: var(--primary); }
     .welcome-actions .btn-outline { background: #ffffff; color: var(--primary); border: 1px solid var(--primary); }
@@ -131,14 +132,14 @@
     .lang-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
     /* ===== STREAK CARD ===== */
-    .streak-card { background: linear-gradient(135deg, var(--primary) 0%, #5AC8FA 100%); border-radius: var(--radius); padding: 18px 20px; color: #fff; box-shadow: 0 4px 24px rgba(0,122,255,0.25); }
+    .streak-card { background: linear-gradient(135deg, #E8821A, #F5A623); border-radius: var(--radius); padding: 18px 20px; color: #fff; box-shadow: 0 4px 24px rgba(232,130,26,0.35); }
     .streak-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.97rem; margin-bottom: 8px; }
     .streak-row strong { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.3px; }
     .streak-status { margin-top: 12px; font-size: 0.88rem; font-weight: 600; text-align: center; padding: 8px 12px; border-radius: var(--radius-pill); }
     .streak-status.safe { background: rgba(255,255,255,0.2); }
     .streak-status.warn { background: rgba(255,59,48,0.3); }
     .streak-status.start { background: rgba(255,255,255,0.2); }
-    .streak-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--primary), #5AC8FA); color: #fff; font-weight: 700; font-size: 0.95rem; padding: 6px 16px; border-radius: var(--radius-pill); box-shadow: 0 2px 12px rgba(0,122,255,0.3); }
+    .streak-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #E8821A, #F5A623); color: #fff; font-weight: 700; font-size: 0.95rem; padding: 6px 16px; border-radius: var(--radius-pill); box-shadow: 0 2px 12px rgba(232,130,26,0.3); }
 
     /* ===== DAY MATRIX ===== */
     .day-btn { flex: 1; padding: 8px 0; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text-muted); font-weight: 600; font-size: 0.78rem; cursor: pointer; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
@@ -152,7 +153,7 @@
     .ach-icon { font-size: 1.4rem; }
 
     /* ===== SALDO CARD ===== */
-    .saldo-card { background: linear-gradient(135deg, var(--primary) 0%, #5AC8FA 100%); border-radius: var(--radius); padding: 28px 20px; color: #fff; position: relative; overflow: hidden; box-shadow: 0 6px 32px rgba(0,122,255,0.28); }
+    .saldo-card { background: linear-gradient(135deg, #4B5CC4, #7B68EE); border-radius: var(--radius); padding: 28px 20px; color: #fff; position: relative; overflow: hidden; box-shadow: 0 6px 32px rgba(75,92,196,0.35); }
     .saldo-card::after { content: ''; position: absolute; right: -20px; top: -20px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.1); }
     .saldo-name { font-size: 1rem; opacity: 0.85; font-weight: 500; }
     .saldo-amount { font-size: 2.8rem; font-weight: 700; letter-spacing: -1px; margin: 6px 0; }
@@ -182,7 +183,7 @@
     .badge-rejected { background: rgba(255,59,48,0.15); color: #CC2F26; }
     .badge-paid { background: rgba(52,199,89,0.15); color: #1A8A3A; }
     .badge-unpaid { background: rgba(142,142,147,0.15); color: var(--text-muted); }
-    .badge-reserved { background: rgba(0,122,255,0.12); color: var(--primary); }
+    .badge-reserved { background: rgba(75,92,196,0.12); color: var(--primary); }
     .sidebar-badge { background: var(--danger); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.68rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
     .sidebar-badge.hidden { display: none; }
 
@@ -294,7 +295,7 @@
     .sidebar-logout-btn:hover { background: rgba(255,59,48,0.08); }
 
     /* ===== FAB ===== */
-    .fab { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: #fff; border: none; cursor: pointer; font-size: 1.6rem; box-shadow: 0 6px 24px rgba(0,122,255,0.4); display: flex; align-items: center; justify-content: center; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); z-index: 150; }
+    .fab { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: #fff; border: none; cursor: pointer; font-size: 1.6rem; box-shadow: 0 6px 24px rgba(75,92,196,0.4); display: flex; align-items: center; justify-content: center; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); z-index: 150; }
     .fab:active { transform: scale(0.92); }
     .fab.hidden { display: none; }
 
@@ -312,7 +313,7 @@
     .pin-pad { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
     .pin-key { padding: 18px; border-radius: 16px; background: rgba(142,142,147,0.12); border: none; cursor: pointer; font-size: 1.3rem; font-weight: 600; color: var(--text); transition: all 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94); font-family: inherit; }
     .pin-key:hover { background: rgba(142,142,147,0.2); }
-    .pin-key:active { transform: scale(0.93); background: rgba(0,122,255,0.12); }
+    .pin-key:active { transform: scale(0.93); background: rgba(75,92,196,0.12); }
     .pin-key.del { color: var(--danger); }
 
     /* ===== CHALLENGE CARD ===== */
@@ -406,12 +407,12 @@
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
         --bg: #0A0A0F; --card: #2C2C2E; --text: #FFFFFF; --text-muted: #8E8E93;
-        --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15);
-        --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3);
+        --border: rgba(255,255,255,0.1); --primary-light: rgba(75,92,196,0.15);
+        --primary-mid: rgba(75,92,196,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3);
         --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
       }
     }
-    [data-theme="dark"] { --bg: #0A0A0F; --card: #2C2C2E; --text: #FFFFFF; --text-muted: #8E8E93; --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15); --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3); --shadow-lg: 0 8px 40px rgba(0,0,0,0.5); }
+    [data-theme="dark"] { --bg: #0A0A0F; --card: #2C2C2E; --text: #FFFFFF; --text-muted: #8E8E93; --border: rgba(255,255,255,0.1); --primary-light: rgba(75,92,196,0.15); --primary-mid: rgba(75,92,196,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3); --shadow-lg: 0 8px 40px rgba(0,0,0,0.5); }
     [data-theme="dark"] body { background: var(--bg); }
     [data-theme="dark"] .login-card { color: var(--text); }
     [data-theme="dark"] .modal { background: #2C2C2E; color: var(--text); }
@@ -425,7 +426,7 @@
     [data-theme="dark"] footer { background: rgba(28,28,30,0.85) !important; border-color: rgba(255,255,255,0.1) !important; }
     [data-theme="dark"] .app-header { background: rgba(0,0,0,0.85); border-color: rgba(255,255,255,0.08); }
     [data-theme="dark"] .btn-outline { background: #3A3A3C; }
-    [data-theme="dark"] .welcome-actions .btn-outline { background: #2C2C2E; color: #007AFF; }
+    [data-theme="dark"] .welcome-actions .btn-outline { background: #2C2C2E; color: #4B5CC4; }
     [data-theme="dark"] .login-card { border: 1px solid rgba(255,255,255,0.08); }
     [data-theme="dark"] .task-item,
     [data-theme="dark"] .pending-item,
@@ -1100,7 +1101,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.3</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.4</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1241,7 +1242,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.2.3</footer>
+  <footer>Homey v7.2.4</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -1328,7 +1329,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.3</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.4</footer>
 </div>
 
 <script>
@@ -3442,7 +3443,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.2.3</footer>
+    <footer>Homey v7.2.4</footer>
   `;
 }
 
