@@ -75,10 +75,17 @@
     #view-login, #view-welcome, #view-family-login, #view-family-register { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; background: var(--bg); }
     .login-card { background: var(--card); border-radius: 24px; padding: 36px 28px; width: 100%; max-width: 400px; box-shadow: var(--shadow-lg); }
     .login-logo { text-align: center; margin-bottom: 28px; }
-    .login-logo .logo-icon { font-size: 3rem; display: block; margin-bottom: 10px; }
+    .login-logo .logo-icon {
+      font-size: 56px; display: inline-block; margin-bottom: 12px;
+      padding: 14px 18px; border-radius: 22px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    }
     .login-logo h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
     .login-logo p { color: var(--text-muted); font-size: 0.95rem; margin-top: 4px; }
     .login-step-title { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 20px; color: var(--text); }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .login-card { animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
     .auth-back-btn { background: none; border: none; cursor: pointer; color: var(--primary); font-size: 0.95rem; padding: 4px 0; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; transition: opacity 0.15s; }
     .auth-back-btn:hover { opacity: 0.7; }
     .auth-divider { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 0.85rem; margin: 16px 0; }
@@ -99,6 +106,7 @@
     .btn-primary:hover { background: #0066DD; }
     .btn-outline { background: var(--bg); color: var(--primary); border: 1.5px solid var(--border); }
     .btn-outline:hover { background: var(--primary-light); border-color: var(--primary); }
+    .welcome-actions .btn-outline { background: #ffffff; color: var(--primary); border: 1px solid var(--primary); }
     .btn-success { background: var(--success); color: #fff; }
     .btn-success:hover { background: #2DB84E; }
     .btn-danger { background: var(--danger); color: #fff; }
@@ -391,13 +399,13 @@
     /* ===== DARK MODE ===== */
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #000000; --card: #1C1C1E; --text: #FFFFFF; --text-muted: #8E8E93;
+        --bg: #0A0A0F; --card: #1C1C1E; --text: #FFFFFF; --text-muted: #8E8E93;
         --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15);
         --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3);
         --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
       }
     }
-    [data-theme="dark"] { --bg: #000000; --card: #1C1C1E; --text: #FFFFFF; --text-muted: #8E8E93; --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15); --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3); --shadow-lg: 0 8px 40px rgba(0,0,0,0.5); }
+    [data-theme="dark"] { --bg: #0A0A0F; --card: #1C1C1E; --text: #FFFFFF; --text-muted: #8E8E93; --border: rgba(255,255,255,0.1); --primary-light: rgba(0,122,255,0.15); --primary-mid: rgba(0,122,255,0.25); --shadow: 0 2px 20px rgba(0,0,0,0.3); --shadow-lg: 0 8px 40px rgba(0,0,0,0.5); }
     [data-theme="dark"] body { background: var(--bg); }
     [data-theme="dark"] .login-card,
     [data-theme="dark"] .modal { background: #2C2C2E; color: var(--text); }
@@ -411,6 +419,8 @@
     [data-theme="dark"] footer { background: rgba(28,28,30,0.85) !important; border-color: rgba(255,255,255,0.1) !important; }
     [data-theme="dark"] .app-header { background: rgba(0,0,0,0.85); border-color: rgba(255,255,255,0.08); }
     [data-theme="dark"] .btn-outline { background: #3A3A3C; }
+    [data-theme="dark"] .welcome-actions .btn-outline { background: #2C2C2E; color: #007AFF; }
+    [data-theme="dark"] .login-card { border: 1px solid rgba(255,255,255,0.08); }
     [data-theme="dark"] .task-item,
     [data-theme="dark"] .pending-item,
     [data-theme="dark"] .card,
@@ -1083,7 +1093,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.0</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.1</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1224,7 +1234,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.2.0</footer>
+  <footer>Homey v7.2.1</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -1311,7 +1321,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.0</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.1</footer>
 </div>
 
 <script>
@@ -3425,7 +3435,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.2.0</footer>
+    <footer>Homey v7.2.1</footer>
   `;
 }
 
