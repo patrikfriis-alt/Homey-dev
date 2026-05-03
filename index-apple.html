@@ -403,6 +403,25 @@
     @keyframes notif-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     @keyframes notif-shrink { from { width: 100%; } to { width: 0%; } }
 
+    /* ===== CHILD THEME (Citrus) ===== */
+    body.child-theme {
+      --primary: #F5A623;
+      --primary-dark: #E8821A;
+      --primary-light: rgba(245,166,35,0.12);
+      --primary-mid: rgba(245,166,35,0.25);
+    }
+    body.child-theme .saldo-card { background: linear-gradient(135deg, #F5A623, #E8821A); box-shadow: 0 6px 32px rgba(245,166,35,0.35); }
+    body.child-theme .streak-card { background: linear-gradient(135deg, #FF6B35, #F5A623); box-shadow: 0 4px 24px rgba(255,107,53,0.35); }
+    body.child-theme .streak-badge { background: linear-gradient(135deg, #FF6B35, #F5A623); box-shadow: 0 2px 12px rgba(255,107,53,0.3); }
+
+    /* ===== PARENT THEME (Indigo) ===== */
+    body.parent-theme {
+      --primary: #4B5CC4;
+      --primary-dark: #3D4EAA;
+      --primary-light: rgba(75,92,196,0.12);
+      --primary-mid: rgba(75,92,196,0.25);
+    }
+
     /* ===== DARK MODE ===== */
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -1101,7 +1120,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.4</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.5</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1242,7 +1261,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.2.4</footer>
+  <footer>Homey v7.2.5</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -1329,7 +1348,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.4</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.5</footer>
 </div>
 
 <script>
@@ -2058,6 +2077,9 @@ function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
+  document.body.classList.remove('child-theme', 'parent-theme');
+  if (name === 'child') document.body.classList.add('child-theme');
+  else if (name === 'parent') document.body.classList.add('parent-theme');
 }
 
 // ===== FAMILY AUTH (Supabase Auth) =====
@@ -3443,7 +3465,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.2.4</footer>
+    <footer>Homey v7.2.5</footer>
   `;
 }
 
