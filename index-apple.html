@@ -15,6 +15,7 @@
   <style>
     /* ===== APPLE DESIGN SYSTEM ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { margin: 0; padding: 0; overflow-x: hidden; }
 
     :root {
       --primary: #4B5CC4;
@@ -121,7 +122,8 @@
     .btn-full { width: 100%; }
 
     /* ===== APP HEADER ===== */
-    .app-header { position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(242,242,247,0.85); padding: 0 20px; height: 52px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .app-header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(242,242,247,0.85); padding: 0 20px; height: 52px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    #view-child, #view-parent { padding-top: 52px; }
     .header-actions { display: flex; align-items: center; gap: 8px; }
     .header-icon-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(142,142,147,0.12); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--text); transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
     .header-icon-btn:hover { background: rgba(142,142,147,0.2); }
@@ -384,6 +386,7 @@
     /* ===== MISC ===== */
     .welcome-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; }
     .reminder-card { background: rgba(255,149,0,0.1); border-radius: 14px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 10px; border-left: 3px solid var(--warning); margin-bottom: 12px; }
+    .reminder-card.pending-reminder { background: var(--primary); color: #fff; border-left-color: transparent; }
     .reminder-text { flex: 1; font-size: 0.88rem; }
     .reminder-close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1rem; transition: color 0.15s; }
     .reminder-close:hover { color: var(--text); }
@@ -421,6 +424,7 @@
       --primary-light: rgba(75,92,196,0.12);
       --primary-mid: rgba(75,92,196,0.25);
     }
+    body.parent-theme .child-summary-saldo { color: #4B5CC4; }
 
     /* ===== DARK MODE ===== */
     @media (prefers-color-scheme: dark) {
@@ -443,7 +447,7 @@
     [data-theme="dark"] .filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
     [data-theme="dark"] .parent-nav { background: rgba(28,28,30,0.88); border-color: rgba(255,255,255,0.1); }
     [data-theme="dark"] footer { background: rgba(28,28,30,0.85) !important; border-color: rgba(255,255,255,0.1) !important; }
-    [data-theme="dark"] .app-header { background: rgba(0,0,0,0.85); border-color: rgba(255,255,255,0.08); }
+    [data-theme="dark"] .app-header { background: rgba(10,10,15,0.9); border-color: rgba(255,255,255,0.08); }
     [data-theme="dark"] .btn-outline { background: #3A3A3C; }
     [data-theme="dark"] .welcome-actions .btn-outline { background: #2C2C2E; color: #4B5CC4; }
     [data-theme="dark"] .login-card { border: 1px solid rgba(255,255,255,0.08); }
@@ -456,6 +460,9 @@
     [data-theme="dark"] .header-icon-btn { background: rgba(255,255,255,0.08); }
     [data-theme="dark"] .task-template-btn { background: #3A3A3C; border-color: rgba(255,255,255,0.1); }
     [data-theme="dark"] .notif-card { background: rgba(44,44,46,0.95); }
+    [data-theme="dark"] .ach-item.locked,
+    [data-theme="dark"] .ach-item.earned { background: #2C2C2E; }
+    [data-theme="dark"] #child-goal-card { background: #2C2C2E; }
 
     /* ===== RESPONSIVE ===== */
     @media (min-width: 600px) {
@@ -1120,7 +1127,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.5</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.6</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1261,7 +1268,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.2.5</footer>
+  <footer>Homey v7.2.6</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -1348,7 +1355,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.5</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.6</footer>
 </div>
 
 <script>
@@ -3465,7 +3472,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.2.5</footer>
+    <footer>Homey v7.2.6</footer>
   `;
 }
 
@@ -5546,12 +5553,12 @@ function renderReminders() {
   if (pendingOld.length > 0) {
     const rid = 'pending_old';
     if (!state.dismissedReminders.has(rid))
-      reminders.push({ id: rid, icon: '📋', text: `${pendingOld.length} ${t('reminderPending')}` });
+      reminders.push({ id: rid, icon: '📋', text: `${pendingOld.length} ${t('reminderPending')}`, pending: true });
   }
 
   if (!reminders.length) return '';
   return reminders.map(r => `
-    <div class="reminder-card" id="reminder-${r.id}">
+    <div class="reminder-card${r.pending ? ' pending-reminder' : ''}" id="reminder-${r.id}">
       <span style="font-size:1.1rem;flex-shrink:0;">${r.icon}</span>
       <div class="reminder-text">${r.text}</div>
       <button class="reminder-close" onclick="dismissReminder('${r.id}')">✕</button>
