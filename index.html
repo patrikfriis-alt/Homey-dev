@@ -1495,6 +1495,10 @@
       <input type="number" id="new-task-points" class="input" placeholder="Pisteet" min="0" step="1" />
     </div>
     <div class="form-group">
+      <label class="input-label">Ohjeistus lapselle (valinnainen)</label>
+      <textarea id="new-task-description" class="input" rows="2" placeholder="Esim. Muista laittaa likaiset vaatteet pesukoneeseen" style="resize:vertical;min-height:60px;"></textarea>
+    </div>
+    <div class="form-group">
       <label class="input-label" data-i18n="recurrence">Toistuvuus</label>
       <select id="new-task-recurrence" class="input" onchange="onNewTaskRecurrenceChange()">
         <option value="" data-i18n="recurrenceNone">Ei toistu</option>
@@ -1613,6 +1617,10 @@
       <input type="number" id="edit-task-points" class="input" placeholder="Pisteet" min="0" step="1" />
     </div>
     <div class="form-group">
+      <label class="input-label">Ohjeistus lapselle (valinnainen)</label>
+      <textarea id="edit-task-description" class="input" rows="2" placeholder="Esim. Muista laittaa likaiset vaatteet pesukoneeseen" style="resize:vertical;min-height:60px;"></textarea>
+    </div>
+    <div class="form-group">
       <label class="input-label" data-i18n="recurrence">Toistuvuus</label>
       <select id="edit-task-recurrence" class="input" onchange="onEditTaskRecurrenceChange()">
         <option value="" data-i18n="recurrenceNone">Ei toistu</option>
@@ -1657,6 +1665,34 @@
     <div style="display:flex;gap:10px;margin-top:6px;">
       <button class="btn btn-outline w-full" onclick="closeModal('modal-edit-task')" data-i18n="cancel">Peruuta</button>
       <button class="btn btn-primary w-full" onclick="saveEditTask(this)" data-i18n="save">Tallenna</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TASK ACTIONS SHEET ===== -->
+<div id="modal-task-actions" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title" id="task-actions-title" style="margin-bottom:16px;"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-outline w-full" onclick="editTaskFromSheet()">✏️ Muokkaa</button>
+      <button class="btn btn-outline w-full" onclick="markDoneForChildFromSheet()">✅ Merkitse tehdyksi lapsen puolesta</button>
+      <button class="btn btn-danger w-full" onclick="deleteTaskFromSheet()">🗑️ Poista</button>
+    </div>
+    <button class="btn btn-outline w-full" style="margin-top:12px;" onclick="closeModal('modal-task-actions')">Peruuta</button>
+  </div>
+</div>
+
+<!-- ===== PARENT MARK DONE FOR CHILD MODAL ===== -->
+<div id="modal-parent-mark-done" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">Merkitse tehdyksi lapsen puolesta</div>
+    <div class="form-group">
+      <label class="input-label">Valitse lapsi</label>
+      <select id="parent-mark-done-child-select" class="input"></select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn btn-outline w-full" onclick="closeModal('modal-parent-mark-done')">Peruuta</button>
+      <button class="btn btn-primary w-full" onclick="confirmParentMarkDone(this)">✅ Merkitse tehdyksi</button>
     </div>
   </div>
 </div>
@@ -1960,7 +1996,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.1.4</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.0</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2101,7 +2137,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.1.4</footer>
+  <footer>Homey v7.2.0</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2188,7 +2224,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.1.4</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.0</footer>
 </div>
 
 <script>
@@ -3882,12 +3918,14 @@ function renderAssignedTasks() {
     const recBadge = task.recurrence ? `<span class="task-rec-badge">🔁 ${recurrenceLabel(task.recurrence)}</span>` : '';
     const dlBadge = deadlineBadgeHtml(task.deadline);
     const typeBadge = `<span class="badge badge-pending" style="font-size:0.68rem;">📌 ${t('child')}</span>`;
+    const descHtml = task.description ? `<div style="font-size:0.78rem;color:var(--text-muted);padding:3px 0 2px;">📋 ${esc(task.description)}</div>` : '';
     return `
       <div class="task-item" onclick="openTaskDetail('${task.id}')">
         <div class="task-row1">
           <span class="task-name">${esc(translateTaskTitle(task.title))}</span>
           ${recBadge}${dlBadge}
         </div>
+        ${descHtml}
         <div class="task-row2">
           <div class="task-row2-left">
             <span class="task-price">${fmt(task.amount)}</span>
@@ -3944,12 +3982,14 @@ function renderFreeTasks() {
     const recBadgeF = task.recurrence ? `<span class="task-rec-badge">🔁 ${recurrenceLabel(task.recurrence)}</span>` : '';
     const dlBadgeF = deadlineBadgeHtml(task.deadline);
     const typeBadge = `<span class="badge badge-unpaid" style="font-size:0.68rem;">🔓 ${t('free')}</span>`;
+    const descHtmlF = task.description ? `<div style="font-size:0.78rem;color:var(--text-muted);padding:3px 0 2px;">📋 ${esc(task.description)}</div>` : '';
     return `
       <div class="task-item" onclick="openTaskDetail('${task.id}')">
         <div class="task-row1">
           <span class="task-name">${esc(translateTaskTitle(task.title))}</span>
           ${recBadgeF}${dlBadgeF}
         </div>
+        ${descHtmlF}
         <div class="task-row2">
           <div class="task-row2-left">
             <span class="task-price">${fmt(task.amount)}</span>
@@ -4302,7 +4342,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.1.4</footer>
+    <footer>Homey v7.2.0</footer>
   `;
 }
 
@@ -4780,7 +4820,7 @@ function renderParentManage() {
     const assignedTo = task.assigned_to ? state.children.find(c => c.id === task.assigned_to) : null;
     const recBadge = task.recurrence ? `<span style="font-size:0.7rem;background:var(--primary-light);color:var(--primary-muted);border-radius:6px;padding:1px 6px;margin-left:4px;">🔁 ${recurrenceLabel(task.recurrence)}</span>` : '';
     return `
-      <div class="task-item">
+      <div class="task-item" style="cursor:pointer;" onclick="openTaskActionsSheet('${task.id}')">
         <div class="task-icon">${task.type === 'free' ? '🔓' : '📌'}</div>
         <div class="task-info">
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;">
@@ -4788,10 +4828,7 @@ function renderParentManage() {
           </div>
           <div style="color:var(--text-muted);font-size:0.8rem;">${fmt(task.amount)} · ${task.type === 'free' ? t('free') : t('child')}${assignedTo ? ' · ' + esc(assignedTo.name) : ''}</div>
         </div>
-        <div style="display:flex;gap:4px;">
-          <button class="btn btn-sm btn-outline" onclick="openEditTaskModal('${task.id}')">✏️</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteTask('${task.id}')">✕</button>
-        </div>
+        <div style="color:var(--text-muted);font-size:1.2rem;padding-left:4px;">›</div>
       </div>
     `;
   }).join('') || `<div class="empty-state"><div class="empty-icon">📋</div><p>${t('noTasks')}</p></div>`;
@@ -5075,6 +5112,69 @@ async function deleteTask(id) {
   }
 }
 
+// ===== TASK ACTIONS SHEET =====
+let _taskActionsSheetId = null;
+let _parentMarkDoneTaskId = null;
+
+function openTaskActionsSheet(taskId) {
+  _taskActionsSheetId = taskId;
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  document.getElementById('task-actions-title').textContent = translateTaskTitle(task.title);
+  openModal('modal-task-actions');
+}
+
+function editTaskFromSheet() {
+  closeModal('modal-task-actions');
+  openEditTaskModal(_taskActionsSheetId);
+}
+
+function deleteTaskFromSheet() {
+  closeModal('modal-task-actions');
+  deleteTask(_taskActionsSheetId);
+}
+
+function markDoneForChildFromSheet() {
+  const task = state.tasks.find(t => t.id === _taskActionsSheetId);
+  if (!task) return;
+  if (task.type === 'assigned' && task.assigned_to) {
+    closeModal('modal-task-actions');
+    parentMarkDoneForChild(_taskActionsSheetId, task.assigned_to);
+  } else {
+    _parentMarkDoneTaskId = _taskActionsSheetId;
+    const sel = document.getElementById('parent-mark-done-child-select');
+    sel.innerHTML = state.children.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    closeModal('modal-task-actions');
+    openModal('modal-parent-mark-done');
+  }
+}
+
+async function confirmParentMarkDone(btn) {
+  const childId = document.getElementById('parent-mark-done-child-select').value;
+  if (!childId || !_parentMarkDoneTaskId) return;
+  closeModal('modal-parent-mark-done');
+  await parentMarkDoneForChild(_parentMarkDoneTaskId, childId, btn);
+  _parentMarkDoneTaskId = null;
+}
+
+async function parentMarkDoneForChild(taskId, childId, btn) {
+  const origText = btn ? btn.textContent : null;
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = t('saving'); }
+    const payload = { task_id: taskId, child_id: childId, status: 'approved', completed_at: new Date().toISOString(), chosen_reward_type: 'cash', family_id: currentFamilyId };
+    const { error } = await sb.from('homey_completions').insert(payload);
+    if (error) throw error;
+    showToast('Merkitty tehdyksi! ✅', 'success');
+    await loadAll();
+    renderParentTasks();
+    renderParentManage();
+  } catch (err) {
+    showNotif(friendlyError(err), 'error', err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }
+}
+
 // ===== CHANGE PASSWORD =====
 async function changePassword(btn) {
   const newPw = document.getElementById('cp-new').value;
@@ -5261,6 +5361,7 @@ function openAddTaskModal() {
   document.getElementById('new-task-days-group').style.display = 'none';
   document.querySelectorAll('#new-task-days-group .day-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('new-task-points').value = '';
+  document.getElementById('new-task-description').value = '';
   document.getElementById('task-price-group').style.display = 'block';
   document.getElementById('new-task-price').required = true;
   document.getElementById('task-points-group').style.display = 'none';
@@ -5400,8 +5501,9 @@ async function saveTask() {
   const pointsRaw = document.getElementById('new-task-points').value;
   const points = (reward_type !== 'cash' && pointsRaw !== '') ? parseInt(pointsRaw, 10) : null;
   const active_days = recurrence === 'weekly' ? getSelectedDays('new') : null;
+  const description = document.getElementById('new-task-description').value.trim() || null;
 
-  const payload = { title: name, amount: Number(price), type, assigned_to, recurrence, deadline, active: true, family_id: currentFamilyId, reward_type, points, active_days };
+  const payload = { title: name, amount: Number(price), type, assigned_to, recurrence, deadline, active: true, family_id: currentFamilyId, reward_type, points, active_days, description };
   const saveBtn = document.querySelector('#modal-add-task .btn-primary');
   try {
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = t('saving'); }
@@ -5651,6 +5753,7 @@ function openEditTaskModal(taskId) {
     b.classList.toggle('active', Array.isArray(task.active_days) && task.active_days.includes(parseInt(b.dataset.day)));
   });
   onEditTaskRecurrenceChange();
+  document.getElementById('edit-task-description').value = task.description || '';
 
   openModal('modal-edit-task');
 }
@@ -5720,12 +5823,13 @@ async function saveEditTask(btn) {
   const pointsRaw = document.getElementById('edit-task-points').value;
   const points = (reward_type !== 'cash' && pointsRaw !== '') ? parseInt(pointsRaw, 10) : null;
   const active_days = recurrence === 'weekly' ? getSelectedDays('edit') : null;
+  const description = document.getElementById('edit-task-description').value.trim() || null;
 
   const origText = btn ? btn.textContent : null;
   try {
     if (btn) { btn.disabled = true; btn.textContent = t('saving'); }
     const { error } = await sb.from('homey_tasks')
-      .update({ title: name, amount: Number(price), type, assigned_to, recurrence, deadline, reward_type, points, active_days })
+      .update({ title: name, amount: Number(price), type, assigned_to, recurrence, deadline, reward_type, points, active_days, description })
       .eq('id', _editTaskId);
     if (error) throw error;
     showToast(t('taskUpdated'), 'success');
