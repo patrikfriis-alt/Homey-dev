@@ -5161,7 +5161,7 @@ async function parentMarkDoneForChild(taskId, childId, btn) {
   const origText = btn ? btn.textContent : null;
   try {
     if (btn) { btn.disabled = true; btn.textContent = t('saving'); }
-    const payload = { task_id: taskId, child_id: childId, status: 'approved', completed_at: new Date().toISOString(), chosen_reward_type: 'cash', family_id: currentFamilyId };
+    const payload = { task_id: taskId, child_id: childId, status: 'approved', completed_at: new Date().toISOString(), chosen_reward_type: 'cash' };
     const { error } = await sb.from('homey_completions').insert(payload);
     if (error) throw error;
     showToast('Merkitty tehdyksi! ✅', 'success');
