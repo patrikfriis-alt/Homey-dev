@@ -1996,7 +1996,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.0</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.3.0</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2137,7 +2137,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.2.0</footer>
+  <footer>Homey v7.3.0</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2173,10 +2173,14 @@
           <span class="nav-icon">🏠</span>
           <span data-i18n="overview">Yleiskuva</span>
         </button>
+        <button class="sidebar-nav-btn" data-tab="pending" onclick="switchParentTab('pending', this)">
+          <span class="nav-icon">⏳</span>
+          <span>Odottaa</span>
+          <span id="pending-badge-sidebar" class="sidebar-badge hidden"></span>
+        </button>
         <button class="sidebar-nav-btn" data-tab="tasks" onclick="switchParentTab('tasks', this)">
           <span class="nav-icon">📋</span>
           <span data-i18n="tasks">Tehtävät</span>
-          <span id="pending-badge-sidebar" class="sidebar-badge hidden"></span>
         </button>
         <button class="sidebar-nav-btn" data-tab="payments" onclick="switchParentTab('payments', this)">
           <span class="nav-icon">💶</span>
@@ -2202,6 +2206,7 @@
     <!-- Panel content area -->
     <div class="parent-panels">
       <div id="parent-panel-overview" class="main-content"></div>
+      <div id="parent-panel-pending" class="main-content hidden"></div>
       <div id="parent-panel-tasks" class="main-content hidden"></div>
       <div id="parent-panel-payments" class="main-content hidden"></div>
       <div id="parent-panel-manage" class="main-content hidden"></div>
@@ -2213,9 +2218,12 @@
     <button class="parent-nav-btn active" data-tab="overview" onclick="switchParentTab('overview', this)">
       <span class="nav-icon">🏠</span><span data-i18n="overview">Yleiskuva</span>
     </button>
+    <button class="parent-nav-btn" data-tab="pending" onclick="switchParentTab('pending', this)">
+      <span class="nav-icon">⏳</span><span>Odottaa</span>
+      <span id="pending-badge" class="badge badge-pending hidden" style="font-size:0.65rem;padding:1px 6px;"></span>
+    </button>
     <button class="parent-nav-btn" data-tab="tasks" onclick="switchParentTab('tasks', this)">
       <span class="nav-icon">📋</span><span data-i18n="tasks">Tehtävät</span>
-      <span id="pending-badge" class="badge badge-pending hidden" style="font-size:0.65rem;padding:1px 6px;"></span>
     </button>
     <button class="parent-nav-btn" data-tab="payments" onclick="switchParentTab('payments', this)">
       <span class="nav-icon">💶</span><span data-i18n="payments">Maksut</span>
@@ -2224,7 +2232,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.0</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.3.0</footer>
 </div>
 
 <script>
@@ -2828,6 +2836,7 @@ function renderCurrentView() {
     renderRanking();
   } else if (id === 'view-parent') {
     renderParentOverview();
+    renderParentPending();
     renderParentTasks();
     renderParentPayments();
     renderParentManage();
@@ -4269,6 +4278,7 @@ async function initParentView() {
   if (sidebarName) sidebarName.textContent = localStorage.getItem('homey_family_name') || '';
 
   renderParentOverview();
+  renderParentPending();
   renderParentTasks();
   renderParentPayments();
   renderParentManage();
@@ -4285,7 +4295,7 @@ function switchParentTab(tab, btn) {
   // Sync both bottom nav and sidebar buttons
   document.querySelectorAll('.parent-nav-btn, .sidebar-nav-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll(`[data-tab="${tab}"]`).forEach(b => b.classList.add('active'));
-  ['overview','tasks','payments','manage'].forEach(t => {
+  ['overview','pending','tasks','payments','manage'].forEach(t => {
     document.getElementById('parent-panel-' + t).classList.toggle('hidden', t !== tab);
   });
   const fab = document.getElementById('fab-add-task');
@@ -4342,7 +4352,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.2.0</footer>
+    <footer>Homey v7.3.0</footer>
   `;
 }
 
@@ -4360,10 +4370,9 @@ function renderParentTasks() {
   const _freeOpen = _free.filter(tk => !tk.reserved_by);
   const _freeReserved = _free.filter(tk => tk.reserved_by);
 
-  // ---- OSIO 2: Suoritukset filtterit ----
+  // ---- OSIO 2: Suoritushistoria filtterit (approved/rejected) ----
   const statusBtns = [
     { key: 'all', label: t('all') },
-    { key: 'pending', label: t('pendingPlural') },
     { key: 'approved', label: t('approvedPlural') },
     { key: 'rejected', label: t('rejectedPlural') },
   ].map(s => {
@@ -4379,13 +4388,11 @@ function renderParentTasks() {
     })
   ].join('');
 
-  // Apply filters to completions
-  let comps = [...state.completions];
+  // Apply filters to completions — exclude pending (pending is on its own tab)
+  let comps = state.completions.filter(c => c.status !== 'pending');
   if (tasksFilter.status !== 'all') comps = comps.filter(c => c.status === tasksFilter.status);
   if (tasksFilter.childId !== 'all') comps = comps.filter(c => c.child_id === tasksFilter.childId);
   comps.sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
-
-  const pendingCount = state.completions.filter(c => c.status === 'pending').length;
 
   const compItems = comps.length ? comps.map(comp => {
     // Use joined data if available, fall back to state lookup
@@ -4408,12 +4415,6 @@ function renderParentTasks() {
     const replyBtn = compComment && !compComment.parent_comment
       ? `<button class="btn btn-outline btn-sm" data-cid="${esc(compComment.id)}" data-ctxt="${esc(compComment.child_comment || '')}" onclick="openParentReplyModal(this.dataset.cid,this.dataset.ctxt)">💬 ${t('addParentReply')}</button>`
       : '';
-    const actions = comp.status === 'pending' ? `
-      <div class="pending-actions">
-        <button class="btn btn-success btn-sm" onclick="approveComp('${comp.id}', this)">${t('approveAction')}</button>
-        <button class="btn btn-danger btn-sm" onclick="rejectComp('${comp.id}', this)">${t('rejectAction')}</button>
-        ${replyBtn}
-      </div>` : (replyBtn ? `<div style="margin-top:8px;">${replyBtn}</div>` : '');
     return `
       <div class="pending-item">
         ${imageHtml}${commentHtml}${parentReplyHtml}
@@ -4432,50 +4433,10 @@ function renderParentTasks() {
             <span class="badge badge-${comp.status}" style="font-size:0.7rem;margin-top:4px;display:inline-block;">${statusLabel(comp.status)}</span>
           </div>
         </div>
-        ${actions}
+        ${replyBtn ? `<div style="margin-top:8px;">${replyBtn}</div>` : ''}
       </div>
     `;
   }).join('') : `<div class="empty-state"><div class="empty-icon">📋</div><p>${t('noCompletions')}</p></div>`;
-
-  // ---- OSIO 3: Odottavat lunastukset ----
-  const claimItems = state.pendingClaims.length ? state.pendingClaims.map(claim => {
-    const child = state.children.find(c => c.id === claim.child_id);
-    const reward = state.rewards.find(r => r.id === claim.reward_id);
-    const d = claim.claimed_at ? new Date(claim.claimed_at) : null;
-    const dateStr = d ? `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}` : '—';
-    return `<div class="pending-item">
-      <div class="pending-item-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          ${renderAvatar(child, 38)}
-          <div>
-            <div class="pending-child-name" style="color:${childColor(child)}">${esc(child?.name || '?')}</div>
-            <div class="pending-task-name">${esc(reward?.icon || '🎁')} ${esc(reward?.name || '?')}</div>
-          </div>
-        </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <div style="font-weight:700;color:var(--primary);font-size:1rem;">⭐ ${reward?.points_cost ?? '?'} p</div>
-          <div class="pending-date">${dateStr}</div>
-        </div>
-      </div>
-      <div style="margin-top:6px;">
-        <input id="claim-comment-${esc(String(claim.id))}" class="input" style="font-size:0.85rem;margin-bottom:6px;" placeholder="Kommentti vanhemmalta (valinnainen)" type="text">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <label style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap;">Hyväksy</label>
-          <input id="claim-override-cost-${esc(String(claim.id))}" class="input" type="number" min="0" value="${reward?.points_cost ?? ''}" style="font-size:0.85rem;width:80px;padding:4px 8px;">
-          <label style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap;">pistettä</label>
-        </div>
-        <div class="pending-actions">
-          <button class="btn btn-success btn-sm" onclick="approveRewardClaim('${esc(String(claim.id))}', this)">✅ Hyväksy</button>
-          <button class="btn btn-danger btn-sm" onclick="rejectRewardClaim('${esc(String(claim.id))}', this)">❌ Hylkää</button>
-        </div>
-      </div>
-    </div>`;
-  }).join('') : '';
-
-  const claimSection = `<div class="card" style="margin-bottom:10px;">
-    <div class="card-title">🛍️ Odottavat lunastukset${state.pendingClaims.length > 0 ? ` <span class="badge badge-pending">${state.pendingClaims.length}</span>` : ''}</div>
-    ${state.pendingClaims.length ? claimItems : '<div class="text-muted" style="font-size:0.875rem;padding:8px 0;">Ei odottavia lunastuksia.</div>'}
-  </div>`;
 
   panel.innerHTML = `
     <div class="card">
@@ -4487,13 +4448,12 @@ function renderParentTasks() {
       </div>
       <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="switchParentTab('manage', null)">Hallinnoi tehtäviä</button>
     </div>
-    ${claimSection}
     <div class="card" style="margin-bottom:10px;">
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${statusBtns}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">${childBtns}</div>
     </div>
     <div class="card">
-      <div class="card-title">${t('completions')}${pendingCount > 0 ? ` <span class="badge badge-pending">${pendingCount} ${t('pending')}</span>` : ''}</div>
+      <div class="card-title">${t('completions')}</div>
       ${compItems}
       ${!state.completionsLoadedAll ? `<div style="text-align:center;margin-top:12px;"><button class="btn btn-outline btn-sm" onclick="loadAllCompletions(this)">Lataa vanhemmat suoritukset</button></div>` : ''}
     </div>
@@ -4528,7 +4488,100 @@ function setTasksFilter(key, value, btn) {
   renderParentTasks();
 }
 
-function renderParentPending() { renderParentTasks(); }
+function renderParentPending() {
+  const panel = document.getElementById('parent-panel-pending');
+
+  // Pending completions
+  const pendingComps = state.completions.filter(c => c.status === 'pending');
+  pendingComps.sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at));
+
+  const compItems = pendingComps.length ? pendingComps.map(comp => {
+    const child = comp.homey_children || state.children.find(c => c.id === comp.child_id);
+    const task = comp.homey_tasks || state.allTasks.find(t => t.id === comp.task_id);
+    const d = comp.completed_at ? new Date(comp.completed_at) : null;
+    const amount = task?.amount ?? 0;
+    const dateStr = d ? `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}` : '—';
+    const compComment = state.comments.find(c => c.completion_id === comp.id);
+    const commentHtml = compComment?.child_comment
+      ? `<div class="child-comment-box">💬 ${esc(compComment.child_comment)}</div>` : '';
+    const parentReplyHtml = compComment?.parent_comment
+      ? `<div class="parent-reply-box">👩‍💼 ${esc(compComment.parent_comment)}</div>` : '';
+    const imageHtml = comp.image_url
+      ? `<div style="margin-bottom:8px;"><img class="completion-thumb" src="${esc(comp.image_url)}" onclick="openImageViewer('${esc(comp.image_url)}')" alt=""></div>` : '';
+    const replyBtn = compComment && !compComment.parent_comment
+      ? `<button class="btn btn-outline btn-sm" data-cid="${esc(compComment.id)}" data-ctxt="${esc(compComment.child_comment || '')}" onclick="openParentReplyModal(this.dataset.cid,this.dataset.ctxt)">💬 ${t('addParentReply')}</button>` : '';
+    return `
+      <div class="pending-item">
+        ${imageHtml}${commentHtml}${parentReplyHtml}
+        <div class="pending-item-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${renderAvatar(child, 38)}
+            <div>
+              <div class="pending-child-name" style="color:${childColor(child)}">${esc(child?.name || '?')}</div>
+              <div class="pending-task-name">${esc(translateTaskTitle(task?.title || ''))}</div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-weight:700;color:var(--success);font-size:1rem;">${fmt(amount)}</div>
+            ${comp.chosen_reward_type === 'points' ? `<div style="font-size:0.78rem;color:var(--primary);">⭐ haluaa pisteitä</div>` : comp.chosen_reward_type === 'cash' && task?.reward_type !== 'cash' ? `<div style="font-size:0.78rem;color:var(--success);">💵 haluaa euroja</div>` : ''}
+            <div class="pending-date">${dateStr}</div>
+          </div>
+        </div>
+        <div class="pending-actions">
+          <button class="btn btn-success btn-sm" onclick="approveComp('${comp.id}', this)">${t('approveAction')}</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectComp('${comp.id}', this)">${t('rejectAction')}</button>
+          ${replyBtn}
+        </div>
+      </div>
+    `;
+  }).join('') : `<div class="empty-state"><div class="empty-icon">✅</div><p>Ei odottavia suorituksia.</p></div>`;
+
+  // Pending reward claims
+  const claimItems = state.pendingClaims.length ? state.pendingClaims.map(claim => {
+    const child = state.children.find(c => c.id === claim.child_id);
+    const reward = state.rewards.find(r => r.id === claim.reward_id);
+    const d = claim.claimed_at ? new Date(claim.claimed_at) : null;
+    const dateStr = d ? `${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}` : '—';
+    return `<div class="pending-item">
+      <div class="pending-item-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${renderAvatar(child, 38)}
+          <div>
+            <div class="pending-child-name" style="color:${childColor(child)}">${esc(child?.name || '?')}</div>
+            <div class="pending-task-name">${esc(reward?.icon || '🎁')} ${esc(reward?.name || '?')}</div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-weight:700;color:var(--primary);font-size:1rem;">⭐ ${reward?.points_cost ?? '?'} p</div>
+          <div class="pending-date">${dateStr}</div>
+        </div>
+      </div>
+      <div style="margin-top:6px;">
+        <input id="claim-comment-${esc(String(claim.id))}" class="input" style="font-size:0.85rem;margin-bottom:6px;" placeholder="Kommentti vanhemmalta (valinnainen)" type="text">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <label style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap;">Hyväksy</label>
+          <input id="claim-override-cost-${esc(String(claim.id))}" class="input" type="number" min="0" value="${reward?.points_cost ?? ''}" style="font-size:0.85rem;width:80px;padding:4px 8px;">
+          <label style="font-size:0.82rem;color:var(--text-muted);white-space:nowrap;">pistettä</label>
+        </div>
+        <div class="pending-actions">
+          <button class="btn btn-success btn-sm" onclick="approveRewardClaim('${esc(String(claim.id))}', this)">✅ Hyväksy</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectRewardClaim('${esc(String(claim.id))}', this)">❌ Hylkää</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : '';
+
+  panel.innerHTML = `
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-title">⏳ Odottavat suoritukset${pendingComps.length > 0 ? ` <span class="badge badge-pending">${pendingComps.length}</span>` : ''}</div>
+      ${compItems}
+    </div>
+    <div class="card">
+      <div class="card-title">🛍️ Odottavat lunastukset${state.pendingClaims.length > 0 ? ` <span class="badge badge-pending">${state.pendingClaims.length}</span>` : ''}</div>
+      ${state.pendingClaims.length ? claimItems : '<div class="text-muted" style="font-size:0.875rem;padding:8px 0;">Ei odottavia lunastuksia.</div>'}
+    </div>
+  `;
+}
 
 async function approveComp(id, btn) {
   try {
