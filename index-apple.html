@@ -77,14 +77,14 @@
     /* ===== LOGIN / WELCOME ===== */
     #view-login, #view-welcome, #view-family-login, #view-family-register { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; background: var(--bg); }
     .login-card { background: var(--card); border-radius: 24px; padding: 36px 28px; width: 100%; max-width: 400px; box-shadow: var(--shadow-lg); }
-    .login-logo { text-align: center; margin-bottom: 28px; }
+    .login-logo { text-align: center; margin-bottom: 16px; }
     .login-logo .logo-icon {
-      font-size: 56px; display: inline-block; margin-bottom: 12px;
-      padding: 14px 18px; border-radius: 22px;
+      font-size: 48px; display: inline-block; margin-bottom: 8px;
+      padding: 10px 14px; border-radius: 20px;
       background: rgba(255,255,255,0.08);
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     }
-    .login-logo h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+    .login-logo h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
     .login-logo p { color: var(--text-muted); font-size: 0.95rem; margin-top: 4px; }
     .login-step-title { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 20px; color: var(--text); }
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -372,7 +372,7 @@
     .payment-task-list li:last-child { border-bottom: none; }
 
     /* ===== CHARTS ===== */
-    .chart-wrap { margin-top: 6px; }
+    .chart-wrap { margin-top: 6px; overflow-x: auto; min-height: 160px; }
     .chart-bar-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
     .chart-value-label { font-size: 0.72rem; color: var(--text-muted); }
     .chart-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
@@ -619,6 +619,10 @@
 
     <!-- TAB 1: Valmis lista -->
     <div id="task-tab-template">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-weight:600;font-size:0.88rem;color:var(--text-muted);">Tehtäväkirjasto</span>
+        <button id="library-edit-btn" class="btn btn-sm btn-outline" onclick="toggleLibraryEditMode()">✏️ Muokkaa listaa</button>
+      </div>
       <div class="task-template-grid" id="task-template-grid"></div>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <input type="text" id="library-new-title" class="input" style="flex:1;font-size:0.85rem;" placeholder="Uusi tehtävä kirjastoon..." />
@@ -1127,7 +1131,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.6</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.2.7</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -1268,7 +1272,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.2.6</footer>
+  <footer>Homey v7.2.7</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -1355,7 +1359,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.6</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.2.7</footer>
 </div>
 
 <script>
@@ -3472,7 +3476,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.2.6</footer>
+    <footer>Homey v7.2.7</footer>
   `;
 }
 
@@ -4444,6 +4448,15 @@ function openAddTaskModal() {
   openModal('modal-add-task');
 }
 
+let _libraryEditMode = false;
+
+function toggleLibraryEditMode() {
+  _libraryEditMode = !_libraryEditMode;
+  const btn = document.getElementById('library-edit-btn');
+  if (btn) btn.textContent = _libraryEditMode ? '✅ Valmis' : '✏️ Muokkaa listaa';
+  renderTaskTemplateGrid();
+}
+
 function renderTaskTemplateGrid() {
   const grid = document.getElementById('task-template-grid');
   if (!state.taskLibrary.length) {
@@ -4453,9 +4466,11 @@ function renderTaskTemplateGrid() {
   grid.innerHTML = state.taskLibrary.map(item => {
     const sel = selectedTemplateName === item.title ? ' selected' : '';
     const escaped = esc(item.title);
-    return `<div style="display:flex;align-items:stretch;gap:4px;">
-      <button class="task-template-btn${sel}" style="flex:1;" data-name="${escaped}" onclick="selectTemplate(this.dataset.name)">${escaped}</button>
-      <button onclick="removeFromTaskLibrary('${esc(String(item.id))}')" style="padding:4px 8px;border:2px solid var(--border);border-radius:var(--radius-sm);background:#fff;cursor:pointer;font-size:0.85rem;" title="Poista kirjastosta">❌</button>
+    const deleteBtn = _libraryEditMode
+      ? `<button onclick="removeFromTaskLibrary('${esc(String(item.id))}')" style="width:28px;height:28px;border:none;border-radius:50%;background:#2C2C2E;color:#FF3B30;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:center;" title="Poista kirjastosta">❌</button>`
+      : '';
+    return `<div style="display:flex;align-items:center;gap:6px;">
+      ${deleteBtn}<button class="task-template-btn${sel}" style="flex:1;" data-name="${escaped}" onclick="selectTemplate(this.dataset.name)">${escaped}</button>
     </div>`;
   }).join('');
 }

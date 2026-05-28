@@ -1996,7 +1996,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.3.0</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.3.2</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2137,7 +2137,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.3.0</footer>
+  <footer>Homey v7.3.2</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2232,7 +2232,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.3.0</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.3.2</footer>
 </div>
 
 <script>
@@ -4352,12 +4352,14 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.3.0</footer>
+    <footer>Homey v7.3.2</footer>
   `;
 }
 
 // Tasks filter state
 const tasksFilter = { status: 'all', childId: 'all' };
+let manageSubTab = 'perhe';
+let manageTasksShown = 10;
 
 function renderParentTasks() {
   const panel = document.getElementById('parent-panel-tasks');
@@ -4809,7 +4811,7 @@ async function payChild(childId, btn) {
   try {
     if (btn) { btn.disabled = true; btn.textContent = t('paying'); }
     const currentMonth = monthKey(new Date().toISOString());
-    const { error } = await sb.from('homey_payments').insert({ child_id: childId, month: currentMonth, amount: saldo, paid_at: new Date().toISOString() });
+    const { error } = await sb.from('homey_payments').insert({ child_id: childId, period_month: parseInt(currentMonth.split('-')[1]), period_year: parseInt(currentMonth.split('-')[0]), amount: saldo, paid_at: new Date().toISOString() });
     if (error) throw error;
     showNotif(t('paymentSaved'), 'payment', fmt(saldo));
     await loadAll();
@@ -4832,7 +4834,7 @@ async function payAll(btn) {
     const failed = [];
     for (const child of toPay) {
       const saldo = calcOpenSaldo(child.id);
-      const { error } = await sb.from('homey_payments').insert({ child_id: child.id, month: currentMonth, amount: saldo, paid_at: new Date().toISOString() });
+      const { error } = await sb.from('homey_payments').insert({ child_id: child.id, period_month: parseInt(currentMonth.split('-')[1]), period_year: parseInt(currentMonth.split('-')[0]), amount: saldo, paid_at: new Date().toISOString() });
       if (error) failed.push(child.name);
     }
     if (failed.length > 0) {
@@ -4853,6 +4855,7 @@ async function payAll(btn) {
 function renderParentManage() {
   const panel = document.getElementById('parent-panel-manage');
 
+  // ---- Lapset ----
   const childItems = state.children.map(child => `
     <div class="task-item">
       ${renderAvatar(child, 42)}
@@ -4868,8 +4871,11 @@ function renderParentManage() {
     </div>
   `).join('') || `<div class="empty-state"><div class="empty-icon">👶</div><p>${t('noChildren')}</p></div>`;
 
-  const allTasks = [...state.tasks]; // already filtered active=true
-  const taskItems = allTasks.map(task => {
+  // ---- Tehtävät (with pagination) ----
+  const allTasks = [...state.tasks];
+  const visibleTasks = allTasks.slice(0, manageTasksShown);
+  const remaining = allTasks.length - manageTasksShown;
+  const taskItems = visibleTasks.map(task => {
     const assignedTo = task.assigned_to ? state.children.find(c => c.id === task.assigned_to) : null;
     const recBadge = task.recurrence ? `<span style="font-size:0.7rem;background:var(--primary-light);color:var(--primary-muted);border-radius:6px;padding:1px 6px;margin-left:4px;">🔁 ${recurrenceLabel(task.recurrence)}</span>` : '';
     return `
@@ -4885,8 +4891,11 @@ function renderParentManage() {
       </div>
     `;
   }).join('') || `<div class="empty-state"><div class="empty-icon">📋</div><p>${t('noTasks')}</p></div>`;
+  const showMoreBtn = remaining > 0
+    ? `<div style="text-align:center;margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="loadMoreManageTasks()">Näytä lisää tehtäviä (${remaining} jäljellä)</button></div>`
+    : '';
 
-  // Feature 3: Challenges
+  // ---- Haasteet ----
   const challengeItems = state.challenges.map(ch => `
     <div class="task-item" style="cursor:default;">
       <div class="task-info" style="flex:1;">
@@ -4897,7 +4906,7 @@ function renderParentManage() {
     </div>
   `).join('') || `<div class="text-muted" style="font-size:0.875rem;padding:8px 0;">${t('noChallenges')}</div>`;
 
-  // Feature 5: Parents
+  // ---- Vanhemmat ----
   const parentItems = state.parents.map(p => `
     <div class="task-item" style="cursor:default;">
       <div class="task-info" style="flex:1;">
@@ -4908,7 +4917,7 @@ function renderParentManage() {
     </div>
   `).join('') || `<div class="text-muted" style="font-size:0.875rem;padding:8px 0;">${t('noChildren')}</div>`;
 
-  // Feature 6: Templates
+  // ---- Tehtäväpohjat ----
   const templateItems = state.templates.map(tmpl => {
     const tasks = JSON.parse(tmpl.tasks_json || '[]');
     return `
@@ -4924,116 +4933,146 @@ function renderParentManage() {
     </div>`;
   }).join('') || `<div class="text-muted" style="font-size:0.875rem;padding:8px 0;">${t('noTemplates')}</div>`;
 
+  // ---- Palkinnot ----
+  const rewardListHtml = state.rewards.length === 0
+    ? '<div class="text-muted" style="font-size:0.875rem;padding:8px 0;">Ei palkintoja vielä.</div>'
+    : state.rewards.map(r => {
+        const pendingCount = state.pendingClaims.filter(c => c.reward_id === r.id).length;
+        return `<div class="task-item" style="cursor:default;">
+          <div style="font-size:1.6rem;flex-shrink:0;">${esc(r.icon || '🎁')}</div>
+          <div class="task-info" style="flex:1;">
+            <div class="task-name">${esc(r.name)}</div>
+            <div style="color:var(--text-muted);font-size:0.8rem;">⭐ ${r.points_cost} p${r.description ? ' · ' + esc(r.description) : ''}${pendingCount > 0 ? ` · <span style="color:var(--warning);">⏳ ${pendingCount} odottaa</span>` : ''}</div>
+          </div>
+          <div style="display:flex;gap:4px;">
+            <button class="btn btn-sm btn-danger" onclick="deleteReward('${esc(String(r.id))}', ${pendingCount})">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+
   const familyName = localStorage.getItem('homey_family_name') || 'Perhe';
-  panel.innerHTML = `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0">${t('children')}</div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-child')">${t('addMore')}</button>
+
+  // ---- Sub-tab bar ----
+  const subTabBar = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="filter-btn${manageSubTab === 'perhe' ? ' active' : ''}" onclick="switchManageSubTab('perhe')">👶 Perhe</button>
+      <button class="filter-btn${manageSubTab === 'tehtavat' ? ' active' : ''}" onclick="switchManageSubTab('tehtavat')">📋 Tehtävät</button>
+      <button class="filter-btn${manageSubTab === 'palkinnot' ? ' active' : ''}" onclick="switchManageSubTab('palkinnot')">🛍️ Palkinnot</button>
+    </div>`;
+
+  // ---- Sub-tab content ----
+  let subTabContent = '';
+  if (manageSubTab === 'perhe') {
+    subTabContent = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">${t('children')}</div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-child')">${t('addMore')}</button>
+        </div>
+        ${childItems}
       </div>
-      ${childItems}
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0">${t('tasks')}</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddTaskModal()">${t('addMore')}</button>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">👤 ${t('parents')}</div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-parent')">${t('addParent')}</button>
+        </div>
+        ${parentItems}
       </div>
-      ${taskItems}
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0">🏁 ${t('weeklyChallenges')}</div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-challenge')">${t('addChallenge')}</button>
+      <div class="card" style="text-align:center;">
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">${t('loggedInAs')} <strong>${esc(familyName)}</strong></div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="openModal('modal-change-parent-pin')">🔢 Vaihda PIN</button>
+          <button class="btn btn-outline btn-sm" onclick="openModal('modal-change-password')">🔐 Vaihda salasana</button>
+          <button class="btn btn-outline btn-sm" onclick="switchFamily()">🔄 ${t('changeFamily')}</button>
+        </div>
+      </div>`;
+  } else if (manageSubTab === 'tehtavat') {
+    subTabContent = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">${t('tasks')}</div>
+          <button class="btn btn-primary btn-sm" onclick="openAddTaskModal()">${t('addMore')}</button>
+        </div>
+        ${taskItems}
+        ${showMoreBtn}
       </div>
-      ${challengeItems}
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0">📦 ${t('taskTemplates')}</div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-save-template')">${t('saveAsTemplate')}</button>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">📦 ${t('taskTemplates')}</div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-save-template')">${t('saveAsTemplate')}</button>
+        </div>
+        ${templateItems}
       </div>
-      ${templateItems}
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0">👤 ${t('parents')}</div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-parent')">${t('addParent')}</button>
-      </div>
-      ${parentItems}
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0">🛍️ Palkinnot</div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
-        <button class="btn btn-sm btn-outline" onclick="prefillReward('⏱️','Ruutuaika','',50,30,'duration')">⏱️ Ruutuaika</button>
-        <button class="btn btn-sm btn-outline" onclick="prefillReward('🎮','Peliaika','',50,30,'duration')">🎮 Peliaika</button>
-        <button class="btn btn-sm btn-outline" onclick="prefillReward('🍕','Ruoan valinta','',100,0,'none')">🍕 Ruoan valinta</button>
-        <button class="btn btn-sm btn-outline" onclick="prefillReward('🎉','Aktiviteetti','',150,0,'none')">🎉 Aktiviteetti</button>
-        <button class="btn btn-sm btn-outline" onclick="prefillReward('🌙','Myöhäisempi nukkumaanmeno','',75,0,'time')">🌙 Myöhempi nukkumaanmeno</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;" id="reward-add-form">
-        <div>
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Kuvake ja nimi</div>
-          <div style="display:flex;gap:8px;">
-            <input id="reward-form-icon" class="input" style="width:60px;text-align:center;font-size:1.2rem;" placeholder="🎁" maxlength="4" value="🎁">
-            <input id="reward-form-name" class="input" style="flex:1;" placeholder="Nimi" type="text">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">🏁 ${t('weeklyChallenges')}</div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-challenge')">${t('addChallenge')}</button>
+        </div>
+        ${challengeItems}
+      </div>`;
+  } else if (manageSubTab === 'palkinnot') {
+    subTabContent = `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0">🛍️ Palkinnot</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+          <button class="btn btn-sm btn-outline" onclick="prefillReward('⏱️','Ruutuaika','',50,30,'duration')">⏱️ Ruutuaika</button>
+          <button class="btn btn-sm btn-outline" onclick="prefillReward('🎮','Peliaika','',50,30,'duration')">🎮 Peliaika</button>
+          <button class="btn btn-sm btn-outline" onclick="prefillReward('🍕','Ruoan valinta','',100,0,'none')">🍕 Ruoan valinta</button>
+          <button class="btn btn-sm btn-outline" onclick="prefillReward('🎉','Aktiviteetti','',150,0,'none')">🎉 Aktiviteetti</button>
+          <button class="btn btn-sm btn-outline" onclick="prefillReward('🌙','Myöhäisempi nukkumaanmeno','',75,0,'time')">🌙 Myöhempi nukkumaanmeno</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;" id="reward-add-form">
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Kuvake ja nimi</div>
+            <div style="display:flex;gap:8px;">
+              <input id="reward-form-icon" class="input" style="width:60px;text-align:center;font-size:1.2rem;" placeholder="🎁" maxlength="4" value="🎁">
+              <input id="reward-form-name" class="input" style="flex:1;" placeholder="Nimi" type="text">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Kuvaus (valinnainen)</div>
+            <input id="reward-form-desc" class="input" style="width:100%;" placeholder="Lisätietoja (valinnainen)" type="text">
+          </div>
+          <div id="reward-form-duration-group" style="display:none;">
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Kesto (min)</div>
+            <input id="reward-form-duration" class="input" style="width:120px;" placeholder="esim. 30" type="number" min="1">
+          </div>
+          <div id="reward-form-time-group" style="display:none;">
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Nukkumaanmenoaika</div>
+            <input id="reward-form-time" class="input" style="width:120px;" type="time" value="21:00">
+          </div>
+          <div id="reward-form-duration-checkbox-group">
+            <label style="display:flex;align-items:center;gap:8px;font-size:0.875rem;cursor:pointer;">
+              <input type="checkbox" id="reward-form-duration-toggle" onchange="toggleRewardDuration(this.checked)">
+              ⏱️ Lisää kesto
+            </label>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Hinta pisteinä</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="reward-form-points" class="input" style="width:120px;" placeholder="esim. 50" type="number" min="1">
+              <button class="btn btn-primary btn-sm" onclick="saveReward()">Lisää etu</button>
+            </div>
           </div>
         </div>
-        <div>
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Kuvaus (valinnainen)</div>
-          <input id="reward-form-desc" class="input" style="width:100%;" placeholder="Lisätietoja (valinnainen)" type="text">
-        </div>
-        <div id="reward-form-duration-group" style="display:none;">
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Kesto (min)</div>
-          <input id="reward-form-duration" class="input" style="width:120px;" placeholder="esim. 30" type="number" min="1">
-        </div>
-        <div id="reward-form-time-group" style="display:none;">
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Nukkumaanmenoaika</div>
-          <input id="reward-form-time" class="input" style="width:120px;" type="time" value="21:00">
-        </div>
-        <div id="reward-form-duration-checkbox-group">
-          <label style="display:flex;align-items:center;gap:8px;font-size:0.875rem;cursor:pointer;">
-            <input type="checkbox" id="reward-form-duration-toggle" onchange="toggleRewardDuration(this.checked)">
-            ⏱️ Lisää kesto
-          </label>
-        </div>
-        <div>
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">Hinta pisteinä</div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input id="reward-form-points" class="input" style="width:120px;" placeholder="esim. 50" type="number" min="1">
-            <button class="btn btn-primary btn-sm" onclick="saveReward()">Lisää etu</button>
-          </div>
-        </div>
-      </div>
-      <div id="reward-list">
-        ${state.rewards.length === 0
-          ? '<div class="text-muted" style="font-size:0.875rem;padding:8px 0;">Ei palkintoja vielä.</div>'
-          : state.rewards.map(r => {
-              const pendingCount = state.pendingClaims.filter(c => c.reward_id === r.id).length;
-              return `<div class="task-item" style="cursor:default;">
-                <div style="font-size:1.6rem;flex-shrink:0;">${esc(r.icon || '🎁')}</div>
-                <div class="task-info" style="flex:1;">
-                  <div class="task-name">${esc(r.name)}</div>
-                  <div style="color:var(--text-muted);font-size:0.8rem;">⭐ ${r.points_cost} p${r.description ? ' · ' + esc(r.description) : ''}${pendingCount > 0 ? ` · <span style="color:var(--warning);">⏳ ${pendingCount} odottaa</span>` : ''}</div>
-                </div>
-                <div style="display:flex;gap:4px;">
-                  <button class="btn btn-sm btn-danger" onclick="deleteReward('${esc(String(r.id))}', ${pendingCount})">✕</button>
-                </div>
-              </div>`;
-            }).join('')
-        }
-      </div>
-    </div>
-    <div class="card" style="text-align:center;">
-      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">${t('loggedInAs')} <strong>${esc(familyName)}</strong></div>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-        <button class="btn btn-outline btn-sm" onclick="openModal('modal-change-parent-pin')">🔢 Vaihda PIN</button>
-        <button class="btn btn-outline btn-sm" onclick="openModal('modal-change-password')">🔐 Vaihda salasana</button>
-        <button class="btn btn-outline btn-sm" onclick="switchFamily()">🔄 ${t('changeFamily')}</button>
-      </div>
-    </div>
-  `;
+        <div id="reward-list">${rewardListHtml}</div>
+      </div>`;
+  }
+
+  panel.innerHTML = subTabBar + subTabContent;
+}
+
+function switchManageSubTab(tab) {
+  manageSubTab = tab;
+  if (tab === 'tehtavat') manageTasksShown = 10;
+  renderParentManage();
+}
+
+function loadMoreManageTasks() {
+  manageTasksShown += 10;
+  renderParentManage();
 }
 
 function prefillReward(icon, name, desc, points, duration, mode) {
