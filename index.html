@@ -2014,7 +2014,7 @@
     <div class="logo-icon">🏠</div>
     <h1>Homey</h1>
     <p>Kotitöiden seuranta</p>
-    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.3.4</p>
+    <p style="opacity:0.5;font-size:0.75rem;margin-top:6px;">Homey v7.3.5</p>
   </div>
   <div class="login-card">
     <!-- Step 1: valitse lapsi -->
@@ -2155,7 +2155,7 @@
       </div>
     </div>
   </div>
-  <footer>Homey v7.3.4</footer>
+  <footer>Homey v7.3.5</footer>
 </div>
 
 <!-- ===== FAB ===== -->
@@ -2250,7 +2250,7 @@
       <span class="nav-icon">⚙️</span><span data-i18n="management">Hallinta</span>
     </button>
   </nav>
-  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.3.4</footer>
+  <footer style="background:#fff;border-top:1px solid var(--border);">Homey v7.3.5</footer>
 </div>
 
 <script>
@@ -3133,6 +3133,8 @@ function switchFamily() {
   state.seenMessages = new Set();
   state.challengeBonusGiven = new Set();
   state.dismissedReminders = new Set();
+  manageSubTab = 'perhe';
+  manageTasksShown = 10;
   document.getElementById('fab-add-task').classList.add('hidden');
   showView('family-login');
 }
@@ -3202,16 +3204,16 @@ function renderAvatar(child, size = 58) {
   if (av && av.startsWith('emoji:')) {
     const emoji = av.slice(6);
     const emojiSize = Math.round(size * 0.55);
-    return `<div style="${sz}${base}background:var(--primary-light);font-size:${emojiSize}px;line-height:1;">${emoji}</div>`;
+    return `<div style="${sz}${base}background:var(--primary-light);font-size:${emojiSize}px;line-height:1;">${esc(emoji)}</div>`;
   }
   if (av && av.startsWith('dicebear:')) {
     const style = av.slice(9);
     const url = dicebearUrl(style, child?.name);
-    return `<img src="${url}" alt="${child?.name}" style="${sz}border-radius:50%;object-fit:cover;flex-shrink:0;" />`;
+    return `<img src="${url}" alt="${esc(child?.name ?? '')}" style="${sz}border-radius:50%;object-fit:cover;flex-shrink:0;" />`;
   }
   // default: bottts with child name
   const url = dicebearUrl('bottts', child?.name);
-  return `<img src="${url}" alt="${child?.name}" style="${sz}border-radius:50%;object-fit:cover;flex-shrink:0;" />`;
+  return `<img src="${url}" alt="${esc(child?.name ?? '')}" style="${sz}border-radius:50%;object-fit:cover;flex-shrink:0;" />`;
 }
 
 // ===== LOAD DATA =====
@@ -3613,6 +3615,7 @@ function logout() {
   _rejectCompId = null; _rejectCompBtn = null;
   _editTaskId = null; _changePinChildId = null;
   _parentReplyCommentId = null;
+  _payChildId = null; _taskActionsSheetId = null; _parentMarkDoneTaskId = null;
   // Close any open modals
   document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
   document.getElementById('fab-add-task').classList.add('hidden');
@@ -4373,7 +4376,7 @@ function renderParentOverview() {
       <div class="children-overview-grid">${childCards}</div>
     </div>
     ${renderAnalytics(panel)}
-    <footer>Homey v7.3.4</footer>
+    <footer>Homey v7.3.5</footer>
   `;
 }
 
@@ -5157,7 +5160,9 @@ function prefillReward(icon, name, desc, points, duration, mode) {
 
 function toggleRewardDuration(checked) {
   document.getElementById('reward-form-duration-group').style.display = checked ? 'block' : 'none';
+  document.getElementById('reward-form-time-group').style.display = 'none';
   if (!checked) document.getElementById('reward-form-duration').value = '';
+  document.getElementById('reward-form-time').value = '21:00';
 }
 
 async function saveReward() {
@@ -5308,6 +5313,8 @@ async function parentMarkDoneForChild(taskId, childId, btn) {
     await loadAll();
     renderParentTasks();
     renderParentManage();
+    renderParentPending();
+    renderParentOverview();
   } catch (err) {
     showNotif(friendlyError(err), 'error', err.message);
   } finally {
